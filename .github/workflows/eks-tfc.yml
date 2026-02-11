@@ -1,0 +1,102 @@
+name: eks-tfc
+
+on:
+  workflow_dispatch:
+    inputs:
+      workspace_suffix:
+        description: "Suffix for Terraform Cloud workspace name"
+        required: false
+      cluster_name:
+        description: "Optional EKS cluster name override"
+        required: false
+      region:
+        description: "Optional AWS region override"
+        required: false
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    env:
+      TFC_TOKEN: ${{ secrets.TFC_TOKEN }}
+      TFC_ORG: ${{ secrets.TFC_ORG }}
+      AWS_REGION: ${{ inputs.region != '' && inputs.region || secrets.AWS_REGION }}
+      WORKSPACE_SUFFIX: ${{ inputs.workspace_suffix != '' && inputs.workspace_suffix || github.run_id }}
+      CLUSTER_NAME_OVERRIDE: ${{ inputs.cluster_name }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_wrapper: false
+
+      - name: Create or reuse Terraform Cloud workspace
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -z "${TFC_TOKEN}" ] || [ -z "${TFC_ORG}" ]; then
+            echo "TFC_TOKEN and TFC_ORG must be set."
+            exit 1
+          fi
+
+          WORKSPACE_NAME="eks-${WORKSPACE_SUFFIX}"
+          echo "workspace=${WORKSPACE_NAME}" >> "$GITHUB_OUTPUT"
+
+          API="https://app.terraform.io/api/v2/organizations/${TFC_ORG}/workspaces/${WORKSPACE_NAME}"
+          STATUS=$(curl -s -o /tmp/ws.json -w "%{http_code}" \
+            -H "Authorization: Bearer ${TFC_TOKEN}" \
+            -H "Content-Type: application/vnd.api+json" \
+            "${API}")
+
+          if [ "${STATUS}" = "404" ]; then
+            echo "Creating workspace ${WORKSPACE_NAME}"
+            curl -s -X POST \
+              -H "Authorization: Bearer ${TFC_TOKEN}" \
+              -H "Content-Type: application/vnd.api+json" \
+              -d "{\"data\":{\"type\":\"workspaces\",\"attributes\":{\"name\":\"${WORKSPACE_NAME}\",\"execution-mode\":\"local\",\"auto-apply\":false,\"tag-names\":[\"eks\",\"github-actions\"]}}}" \
+              "https://app.terraform.io/api/v2/organizations/${TFC_ORG}/workspaces" \
+              > /tmp/ws_create.json
+          else
+            echo "Workspace ${WORKSPACE_NAME} already exists"
+          fi
+
+          echo "TF_WORKSPACE=${WORKSPACE_NAME}" >> "$GITHUB_ENV"
+          echo "TF_TOKEN_app_terraform_io=${TFC_TOKEN}" >> "$GITHUB_ENV"
+
+      - name: Terraform init
+        run: |
+          terraform init \
+            -backend-config="organization=${TFC_ORG}" \
+            -backend-config="workspaces.name=${TF_WORKSPACE}"
+
+      - name: Terraform plan
+        run: |
+          if [ -n "${CLUSTER_NAME_OVERRIDE}" ]; then
+            CLUSTER_NAME="${CLUSTER_NAME_OVERRIDE}"
+          else
+            CLUSTER_NAME="${TF_WORKSPACE}"
+          fi
+
+          terraform plan \
+            -var="aws_region=${AWS_REGION}" \
+            -var="cluster_name=${CLUSTER_NAME}"
+
+      - name: Terraform apply
+        run: |
+          if [ -n "${CLUSTER_NAME_OVERRIDE}" ]; then
+            CLUSTER_NAME="${CLUSTER_NAME_OVERRIDE}"
+          else
+            CLUSTER_NAME="${TF_WORKSPACE}"
+          fi
+
+          terraform apply -auto-approve \
+            -var="aws_region=${AWS_REGION}" \
+            -var="cluster_name=${CLUSTER_NAME}"
