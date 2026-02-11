@@ -48,7 +48,6 @@ jobs:
           fi
 
           WORKSPACE_NAME="eks-${WORKSPACE_SUFFIX}"
-          echo "workspace=${WORKSPACE_NAME}" >> "$GITHUB_OUTPUT"
 
           API="https://app.terraform.io/api/v2/organizations/${TFC_ORG}/workspaces/${WORKSPACE_NAME}"
           STATUS=$(curl -s -o /tmp/ws.json -w "%{http_code}" \
@@ -68,7 +67,8 @@ jobs:
             echo "Workspace ${WORKSPACE_NAME} already exists"
           fi
 
-          echo "TF_WORKSPACE=${WORKSPACE_NAME}" >> "$GITHUB_ENV"
+          echo "WORKSPACE_NAME=${WORKSPACE_NAME}" >> "$GITHUB_ENV"
+          echo "TF_WORKSPACE=${WORKSPACE_SUFFIX}" >> "$GITHUB_ENV"
           echo "TF_TOKEN_app_terraform_io=${TFC_TOKEN}" >> "$GITHUB_ENV"
 
       - name: Terraform init
@@ -81,7 +81,7 @@ jobs:
           if [ -n "${CLUSTER_NAME_OVERRIDE}" ]; then
             CLUSTER_NAME="${CLUSTER_NAME_OVERRIDE}"
           else
-            CLUSTER_NAME="${TF_WORKSPACE}"
+            CLUSTER_NAME="${WORKSPACE_NAME}"
           fi
 
           terraform plan \
@@ -93,7 +93,7 @@ jobs:
           if [ -n "${CLUSTER_NAME_OVERRIDE}" ]; then
             CLUSTER_NAME="${CLUSTER_NAME_OVERRIDE}"
           else
-            CLUSTER_NAME="${TF_WORKSPACE}"
+            CLUSTER_NAME="${WORKSPACE_NAME}"
           fi
 
           terraform apply -auto-approve \
