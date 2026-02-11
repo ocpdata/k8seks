@@ -74,8 +74,7 @@ jobs:
       - name: Terraform init
         run: |
           terraform init \
-            -backend-config="organization=${TFC_ORG}" \
-            -backend-config="workspaces.name=${TF_WORKSPACE}"
+            -backend-config="organization=${TFC_ORG}"
 
       - name: Terraform plan
         run: |

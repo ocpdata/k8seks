@@ -8,5 +8,9 @@ terraform {
     }
   }
 
-  backend "remote" {}
+  backend "remote" {
+    workspaces {
+      prefix = "eks-"
+    }
+  }
 }
