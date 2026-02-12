@@ -33,11 +33,11 @@ jobs:
     needs: prep
     outputs:
       workspace_name: ${{ steps.workspace.outputs.workspace_name }}
-    env:
-      TFC_TOKEN: ${{ secrets.TFC_TOKEN }}
-      TFC_ORG: ${{ secrets.TFC_ORG }}
-      WORKSPACE_SUFFIX: ${{ inputs.workspace_suffix != '' && inputs.workspace_suffix || github.run_id }}
+      workspace_suffix: ${{ steps.workspace.outputs.workspace_suffix }}
     steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
       - name: Resolve Terraform Cloud workspace
         id: workspace
         shell: bash
@@ -48,6 +48,12 @@ jobs:
             exit 1
           fi
 
+          if [ ! -f .tfworkspace ]; then
+            echo "No .tfworkspace file found. Run eks-tfc.yml first."
+            exit 1
+          fi
+
+          WORKSPACE_SUFFIX=$(cat .tfworkspace | tr -d ' \n')
           WORKSPACE_NAME="eks-${WORKSPACE_SUFFIX}"
 
           API="https://app.terraform.io/api/v2/organizations/${TFC_ORG}/workspaces/${WORKSPACE_NAME}"
@@ -68,6 +74,10 @@ jobs:
           fi
 
           echo "workspace_name=${WORKSPACE_NAME}" >> "$GITHUB_OUTPUT"
+          echo "workspace_suffix=${WORKSPACE_SUFFIX}" >> "$GITHUB_OUTPUT"
+        env:
+          TFC_TOKEN: ${{ secrets.TFC_TOKEN }}
+          TFC_ORG: ${{ secrets.TFC_ORG }}
 
   plan-destroy:
     runs-on: ubuntu-latest
@@ -76,9 +86,9 @@ jobs:
       TFC_TOKEN: ${{ secrets.TFC_TOKEN }}
       TFC_ORG: ${{ secrets.TFC_ORG }}
       TF_TOKEN_app_terraform_io: ${{ secrets.TFC_TOKEN }}
-      TF_WORKSPACE: ${{ inputs.workspace_suffix != '' && inputs.workspace_suffix || github.run_id }}
+      TF_WORKSPACE: ${{ needs.workspace.outputs.workspace_suffix }}
       AWS_REGION: ${{ inputs.region != '' && inputs.region || secrets.AWS_REGION }}
-      WORKSPACE_SUFFIX: ${{ inputs.workspace_suffix != '' && inputs.workspace_suffix || github.run_id }}
+      WORKSPACE_SUFFIX: ${{ needs.workspace.outputs.workspace_suffix }}
       CLUSTER_NAME_OVERRIDE: ${{ inputs.cluster_name }}
       WORKSPACE_NAME: ${{ needs.workspace.outputs.workspace_name }}
     steps:
@@ -122,9 +132,9 @@ jobs:
       TFC_TOKEN: ${{ secrets.TFC_TOKEN }}
       TFC_ORG: ${{ secrets.TFC_ORG }}
       TF_TOKEN_app_terraform_io: ${{ secrets.TFC_TOKEN }}
-      TF_WORKSPACE: ${{ inputs.workspace_suffix != '' && inputs.workspace_suffix || github.run_id }}
+      TF_WORKSPACE: ${{ needs.workspace.outputs.workspace_suffix }}
       AWS_REGION: ${{ inputs.region != '' && inputs.region || secrets.AWS_REGION }}
-      WORKSPACE_SUFFIX: ${{ inputs.workspace_suffix != '' && inputs.workspace_suffix || github.run_id }}
+      WORKSPACE_SUFFIX: ${{ needs.workspace.outputs.workspace_suffix }}
       CLUSTER_NAME_OVERRIDE: ${{ inputs.cluster_name }}
       WORKSPACE_NAME: ${{ needs.workspace.outputs.workspace_name }}
     steps:
