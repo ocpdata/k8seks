@@ -16,23 +16,17 @@ on:
 jobs:
   prep:
     runs-on: ubuntu-latest
-    outputs:
-      aws_region: ${{ steps.set-vars.outputs.aws_region }}
-      workspace_suffix: ${{ steps.set-vars.outputs.workspace_suffix }}
-      cluster_name_override: ${{ steps.set-vars.outputs.cluster_name_override }}
     steps:
-      - name: Resolve inputs
-        id: set-vars
+      - name: Validate inputs
         shell: bash
         run: |
           set -euo pipefail
-          echo "aws_region=${AWS_REGION}" >> "$GITHUB_OUTPUT"
-          echo "workspace_suffix=${WORKSPACE_SUFFIX}" >> "$GITHUB_OUTPUT"
-          echo "cluster_name_override=${CLUSTER_NAME_OVERRIDE}" >> "$GITHUB_OUTPUT"
+          if [ -z "${AWS_REGION}" ]; then
+            echo "AWS region is required (input region or secrets.AWS_REGION)."
+            exit 1
+          fi
         env:
           AWS_REGION: ${{ inputs.region != '' && inputs.region || secrets.AWS_REGION }}
-          WORKSPACE_SUFFIX: ${{ inputs.workspace_suffix != '' && inputs.workspace_suffix || github.run_id }}
-          CLUSTER_NAME_OVERRIDE: ${{ inputs.cluster_name }}
 
   workspace:
     runs-on: ubuntu-latest
@@ -42,7 +36,7 @@ jobs:
     env:
       TFC_TOKEN: ${{ secrets.TFC_TOKEN }}
       TFC_ORG: ${{ secrets.TFC_ORG }}
-      WORKSPACE_SUFFIX: ${{ needs.prep.outputs.workspace_suffix }}
+      WORKSPACE_SUFFIX: ${{ inputs.workspace_suffix != '' && inputs.workspace_suffix || github.run_id }}
     steps:
       - name: Resolve Terraform Cloud workspace
         id: workspace
@@ -76,9 +70,9 @@ jobs:
       TFC_TOKEN: ${{ secrets.TFC_TOKEN }}
       TFC_ORG: ${{ secrets.TFC_ORG }}
       TF_TOKEN_app_terraform_io: ${{ secrets.TFC_TOKEN }}
-      AWS_REGION: ${{ needs.prep.outputs.aws_region }}
-      WORKSPACE_SUFFIX: ${{ needs.prep.outputs.workspace_suffix }}
-      CLUSTER_NAME_OVERRIDE: ${{ needs.prep.outputs.cluster_name_override }}
+      AWS_REGION: ${{ inputs.region != '' && inputs.region || secrets.AWS_REGION }}
+      WORKSPACE_SUFFIX: ${{ inputs.workspace_suffix != '' && inputs.workspace_suffix || github.run_id }}
+      CLUSTER_NAME_OVERRIDE: ${{ inputs.cluster_name }}
       WORKSPACE_NAME: ${{ needs.workspace.outputs.workspace_name }}
     steps:
       - name: Checkout
@@ -120,9 +114,9 @@ jobs:
       TFC_TOKEN: ${{ secrets.TFC_TOKEN }}
       TFC_ORG: ${{ secrets.TFC_ORG }}
       TF_TOKEN_app_terraform_io: ${{ secrets.TFC_TOKEN }}
-      AWS_REGION: ${{ needs.prep.outputs.aws_region }}
-      WORKSPACE_SUFFIX: ${{ needs.prep.outputs.workspace_suffix }}
-      CLUSTER_NAME_OVERRIDE: ${{ needs.prep.outputs.cluster_name_override }}
+      AWS_REGION: ${{ inputs.region != '' && inputs.region || secrets.AWS_REGION }}
+      WORKSPACE_SUFFIX: ${{ inputs.workspace_suffix != '' && inputs.workspace_suffix || github.run_id }}
+      CLUSTER_NAME_OVERRIDE: ${{ inputs.cluster_name }}
       WORKSPACE_NAME: ${{ needs.workspace.outputs.workspace_name }}
     steps:
       - name: Checkout
