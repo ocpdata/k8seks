@@ -71,7 +71,7 @@ jobs:
 
   plan-destroy:
     runs-on: ubuntu-latest
-    needs: workspace
+    needs: [prep, workspace]
     env:
       TFC_TOKEN: ${{ secrets.TFC_TOKEN }}
       TFC_ORG: ${{ secrets.TFC_ORG }}
@@ -115,7 +115,7 @@ jobs:
 
   destroy:
     runs-on: ubuntu-latest
-    needs: plan-destroy
+    needs: [prep, workspace, plan-destroy]
     env:
       TFC_TOKEN: ${{ secrets.TFC_TOKEN }}
       TFC_ORG: ${{ secrets.TFC_ORG }}
