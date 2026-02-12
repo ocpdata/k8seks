@@ -12,6 +12,22 @@ on:
       region:
         description: "Optional AWS region override"
         required: false
+      enable_nginx:
+        description: "Deploy NGINX Plus (true/false)"
+        required: false
+        default: "false"
+        type: choice
+        options:
+          - "false"
+          - "true"
+      terraform_target:
+        description: "Target specific module (leave empty for all, or module.eks, module.nginx)"
+        required: false
+        type: choice
+        options:
+          - ""
+          - "module.eks"
+          - "module.nginx"
 
 permissions:
   contents: write
@@ -124,13 +140,20 @@ jobs:
             CLUSTER_NAME="eks-${WORKSPACE_SUFFIX}"
           fi
 
+          ENABLE_NGINX="${{ inputs.enable_nginx }}"
+          TERRAFORM_TARGET="${{ inputs.terraform_target }}"
+
+          # Build terraform plan command
+          PLAN_CMD="terraform plan"
+          if [ -n "${TERRAFORM_TARGET}" ]; then
+            PLAN_CMD="${PLAN_CMD} -target=${TERRAFORM_TARGET}"
+          fi
+
           # Deploy EKS cluster with optional NGINX Plus
-          # By default: NGINX Plus disabled (enable_nginx=false)
-          # To enable: use enable_nginx=true with NGINX credentials
-          terraform plan \
+          ${PLAN_CMD} \
             -var="aws_region=${AWS_REGION}" \
             -var="cluster_name=${CLUSTER_NAME}" \
-            -var="enable_nginx=false" \
+            -var="enable_nginx=${ENABLE_NGINX}" \
             -var="nginx_repo_crt=${NGINX_REPO_CRT:-}" \
             -var="nginx_repo_key=${NGINX_REPO_KEY:-}" \
             -var="license_jwt=${LICENSE_JWT:-}"
@@ -184,10 +207,19 @@ jobs:
             CLUSTER_NAME="eks-${WORKSPACE_SUFFIX}"
           fi
 
-          terraform apply -auto-approve \
+          ENABLE_NGINX="${{ inputs.enable_nginx }}"
+          TERRAFORM_TARGET="${{ inputs.terraform_target }}"
+
+          # Build terraform apply command
+          APPLY_CMD="terraform apply -auto-approve"
+          if [ -n "${TERRAFORM_TARGET}" ]; then
+            APPLY_CMD="${APPLY_CMD} -target=${TERRAFORM_TARGET}"
+          fi
+
+          ${APPLY_CMD} \
             -var="aws_region=${AWS_REGION}" \
             -var="cluster_name=${CLUSTER_NAME}" \
-            -var="enable_nginx=false" \
+            -var="enable_nginx=${ENABLE_NGINX}" \
             -var="nginx_repo_crt=${NGINX_REPO_CRT:-}" \
             -var="nginx_repo_key=${NGINX_REPO_KEY:-}" \
             -var="license_jwt=${LICENSE_JWT:-}"
