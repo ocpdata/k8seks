@@ -25,10 +25,33 @@ desired_size   = 2
 # NGINX Plus Configuration (optional - set enable_nginx = true to deploy)
 # ============================================================================
 
-enable_nginx           = false
-nginx_namespace        = "nginx"
-nginx_chart_version    = "1.0.0"
-nginx_helm_values      = ""  # Add YAML values as a string if needed
+enable_nginx              = false
+nginx_namespace           = "nginx"
+nginx_chart_version       = "1.0.0"
+enable_nginx_one_agent    = true
+
+# NGINX repository credentials (from NGINX Plus subscription)
+# Option 1: Load from files (local development)
+# nginx_repo_crt  = file("${path.root}/.nginx/nginx-repo.crt")
+# nginx_repo_key  = file("${path.root}/.nginx/nginx-repo.key")
+#
+# Option 2: Set directly (not recommended - use secrets instead)
+# nginx_repo_crt  = "-----BEGIN CERTIFICATE-----\n..."
+# nginx_repo_key  = "-----BEGIN RSA PRIVATE KEY-----\n..."
+#
+# In GitHub Actions, these come from secrets:
+# nginx_repo_crt  = var.nginx_repo_crt  (from secrets.NGINX_REPO_CRT)
+# nginx_repo_key  = var.nginx_repo_key  (from secrets.NGINX_REPO_KEY)
+
+nginx_repo_crt          = ""
+nginx_repo_key          = ""
+
+# NGINX One Agent license JWT (from NGINX subscription)
+# license_jwt = file("${path.root}/.nginx/license.jwt")
+license_jwt             = ""
+
+# Additional Helm values (YAML as string)
+nginx_helm_values       = ""
 
 # ============================================================================
 # Tags
