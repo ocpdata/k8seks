@@ -48,6 +48,24 @@ variable "desired_size" {
   default     = 2
 }
 
+variable "cluster_endpoint_public_access" {
+  description = "Enable public access to the EKS API endpoint."
+  type        = bool
+  default     = true
+}
+
+variable "cluster_endpoint_private_access" {
+  description = "Enable private access to the EKS API endpoint."
+  type        = bool
+  default     = true
+}
+
+variable "cluster_endpoint_public_access_cidrs" {
+  description = "CIDR blocks allowed to access the EKS public endpoint."
+  type        = list(string)
+  default     = ["0.0.0.0/0"]
+}
+
 # ============================================================================
 # Root Variables - NGINX Plus Module
 # ============================================================================

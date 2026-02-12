@@ -21,6 +21,11 @@ min_size       = 1
 max_size       = 3
 desired_size   = 2
 
+# EKS API endpoint access
+cluster_endpoint_public_access       = true
+cluster_endpoint_private_access      = true
+cluster_endpoint_public_access_cidrs = ["0.0.0.0/0"]
+
 # ============================================================================
 # NGINX Plus Configuration (optional - set enable_nginx = true to deploy)
 # ============================================================================

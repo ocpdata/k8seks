@@ -11,6 +11,10 @@ module "eks" {
   max_size           = var.max_size
   desired_size       = var.desired_size
 
+  cluster_endpoint_public_access       = var.cluster_endpoint_public_access
+  cluster_endpoint_private_access      = var.cluster_endpoint_private_access
+  cluster_endpoint_public_access_cidrs = var.cluster_endpoint_public_access_cidrs
+
   tags = var.tags
 }
 
