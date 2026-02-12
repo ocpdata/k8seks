@@ -55,3 +55,22 @@ output "nginx_release_status" {
   description = "NGINX Plus Helm release status."
   value       = try(module.nginx.release_status, null)
 }
+
+# ==========================================================================
+# Cine App Outputs
+# ==========================================================================
+
+output "cine_namespace" {
+  description = "Cine namespace."
+  value       = try(module.cine.namespace, null)
+}
+
+output "cine_service_name" {
+  description = "Cine service name."
+  value       = try(module.cine.service_name, null)
+}
+
+output "cine_ingress_host" {
+  description = "Cine ingress host."
+  value       = try(module.cine.ingress_host, null)
+}

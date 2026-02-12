@@ -37,3 +37,24 @@ module "nginx" {
   depends_on = [module.eks]
 }
 
+# Cine App Module (optional)
+module "cine" {
+  source = "./modules/cine"
+
+  enabled            = var.enable_cine
+  namespace          = var.cine_namespace
+  image              = var.cine_image
+  replicas           = var.cine_replicas
+  container_port     = var.cine_container_port
+  service_port       = var.cine_service_port
+  command            = var.cine_command
+  args               = var.cine_args
+  env                = var.cine_env
+  ingress_enabled    = var.cine_ingress_enabled
+  ingress_host       = var.cine_ingress_host
+  ingress_path       = var.cine_ingress_path
+  ingress_class_name = var.cine_ingress_class_name
+
+  depends_on = [module.eks]
+}
+

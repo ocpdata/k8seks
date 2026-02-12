@@ -137,3 +137,85 @@ variable "tags" {
   type        = map(string)
   default     = {}
 }
+
+# ============================================================================
+# Cine App Variables
+# ============================================================================
+
+variable "enable_cine" {
+  description = "Enable or disable the cine module."
+  type        = bool
+  default     = false
+}
+
+variable "cine_namespace" {
+  description = "Kubernetes namespace for cine."
+  type        = string
+  default     = "cine"
+}
+
+variable "cine_image" {
+  description = "Docker image for cine."
+  type        = string
+  default     = "node:20-alpine"
+}
+
+variable "cine_replicas" {
+  description = "Number of cine replicas."
+  type        = number
+  default     = 1
+}
+
+variable "cine_container_port" {
+  description = "Container port for cine."
+  type        = number
+  default     = 3000
+}
+
+variable "cine_service_port" {
+  description = "Service port for cine."
+  type        = number
+  default     = 80
+}
+
+variable "cine_command" {
+  description = "Command to run in container."
+  type        = list(string)
+  default     = ["node", "-e", "require('http').createServer((req,res)=>res.end('Hello from Cine')).listen(3000)"]
+}
+
+variable "cine_args" {
+  description = "Arguments for the command."
+  type        = list(string)
+  default     = []
+}
+
+variable "cine_env" {
+  description = "Environment variables for cine."
+  type        = map(string)
+  default     = {}
+}
+
+variable "cine_ingress_enabled" {
+  description = "Enable Ingress for cine."
+  type        = bool
+  default     = true
+}
+
+variable "cine_ingress_host" {
+  description = "Ingress host for cine."
+  type        = string
+  default     = "cine.example.com"
+}
+
+variable "cine_ingress_path" {
+  description = "Ingress path for cine."
+  type        = string
+  default     = "/"
+}
+
+variable "cine_ingress_class_name" {
+  description = "Ingress class name."
+  type        = string
+  default     = "nginx"
+}
