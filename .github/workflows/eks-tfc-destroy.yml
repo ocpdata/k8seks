@@ -48,7 +48,7 @@ jobs:
             exit 1
           fi
 
-          WORKSPACE_NAME="${WORKSPACE_SUFFIX}"
+          WORKSPACE_NAME="eks-${WORKSPACE_SUFFIX}"
 
           API="https://app.terraform.io/api/v2/organizations/${TFC_ORG}/workspaces/${WORKSPACE_NAME}"
           STATUS=$(curl -s -o /tmp/ws.json -w "%{http_code}" \
@@ -56,8 +56,14 @@ jobs:
             -H "Content-Type: application/vnd.api+json" \
             "${API}")
 
-          if [ "${STATUS}" = "404" ]; then
+          if [ "${STATUS}" = "200" ]; then
+            echo "Workspace ${WORKSPACE_NAME} exists"
+          elif [ "${STATUS}" = "404" ]; then
             echo "Workspace ${WORKSPACE_NAME} does not exist."
+            exit 1
+          else
+            echo "Failed to query workspace ${WORKSPACE_NAME} (status ${STATUS})."
+            cat /tmp/ws.json
             exit 1
           fi
 
@@ -70,7 +76,7 @@ jobs:
       TFC_TOKEN: ${{ secrets.TFC_TOKEN }}
       TFC_ORG: ${{ secrets.TFC_ORG }}
       TF_TOKEN_app_terraform_io: ${{ secrets.TFC_TOKEN }}
-      TF_WORKSPACE: ${{ needs.workspace.outputs.workspace_name }}
+      TF_WORKSPACE: ${{ inputs.workspace_suffix != '' && inputs.workspace_suffix || github.run_id }}
       AWS_REGION: ${{ inputs.region != '' && inputs.region || secrets.AWS_REGION }}
       WORKSPACE_SUFFIX: ${{ inputs.workspace_suffix != '' && inputs.workspace_suffix || github.run_id }}
       CLUSTER_NAME_OVERRIDE: ${{ inputs.cluster_name }}
@@ -94,6 +100,7 @@ jobs:
       - name: Terraform init
         run: |
           terraform init \
+            -input=false \
             -backend-config="organization=${TFC_ORG}"
 
       - name: Terraform plan destroy
@@ -115,7 +122,7 @@ jobs:
       TFC_TOKEN: ${{ secrets.TFC_TOKEN }}
       TFC_ORG: ${{ secrets.TFC_ORG }}
       TF_TOKEN_app_terraform_io: ${{ secrets.TFC_TOKEN }}
-      TF_WORKSPACE: ${{ needs.workspace.outputs.workspace_name }}
+      TF_WORKSPACE: ${{ inputs.workspace_suffix != '' && inputs.workspace_suffix || github.run_id }}
       AWS_REGION: ${{ inputs.region != '' && inputs.region || secrets.AWS_REGION }}
       WORKSPACE_SUFFIX: ${{ inputs.workspace_suffix != '' && inputs.workspace_suffix || github.run_id }}
       CLUSTER_NAME_OVERRIDE: ${{ inputs.cluster_name }}
@@ -139,6 +146,7 @@ jobs:
       - name: Terraform init
         run: |
           terraform init \
+            -input=false \
             -backend-config="organization=${TFC_ORG}"
 
       - name: Terraform destroy

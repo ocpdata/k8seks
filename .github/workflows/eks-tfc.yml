@@ -48,7 +48,7 @@ jobs:
             exit 1
           fi
 
-          WORKSPACE_NAME="${WORKSPACE_SUFFIX}"
+          WORKSPACE_NAME="eks-${WORKSPACE_SUFFIX}"
 
           API="https://app.terraform.io/api/v2/organizations/${TFC_ORG}/workspaces/${WORKSPACE_NAME}"
           STATUS=$(curl -s -o /tmp/ws.json -w "%{http_code}" \
@@ -56,16 +56,25 @@ jobs:
             -H "Content-Type: application/vnd.api+json" \
             "${API}")
 
-          if [ "${STATUS}" = "404" ]; then
+          if [ "${STATUS}" = "200" ]; then
+            echo "Workspace ${WORKSPACE_NAME} already exists"
+          elif [ "${STATUS}" = "404" ]; then
             echo "Creating workspace ${WORKSPACE_NAME}"
-            curl -s -X POST \
+            CREATE_STATUS=$(curl -s -o /tmp/ws_create.json -w "%{http_code}" \
+              -X POST \
               -H "Authorization: Bearer ${TFC_TOKEN}" \
               -H "Content-Type: application/vnd.api+json" \
               -d "{\"data\":{\"type\":\"workspaces\",\"attributes\":{\"name\":\"${WORKSPACE_NAME}\",\"execution-mode\":\"local\",\"auto-apply\":false,\"tag-names\":[\"eks\",\"github-actions\"]}}}" \
-              "https://app.terraform.io/api/v2/organizations/${TFC_ORG}/workspaces" \
-              > /tmp/ws_create.json
+              "https://app.terraform.io/api/v2/organizations/${TFC_ORG}/workspaces")
+            if [ "${CREATE_STATUS}" != "201" ] && [ "${CREATE_STATUS}" != "200" ]; then
+              echo "Failed to create workspace ${WORKSPACE_NAME} (status ${CREATE_STATUS})."
+              cat /tmp/ws_create.json
+              exit 1
+            fi
           else
-            echo "Workspace ${WORKSPACE_NAME} already exists"
+            echo "Failed to query workspace ${WORKSPACE_NAME} (status ${STATUS})."
+            cat /tmp/ws.json
+            exit 1
           fi
 
           echo "workspace_name=${WORKSPACE_NAME}" >> "$GITHUB_OUTPUT"
@@ -77,7 +86,7 @@ jobs:
       TFC_TOKEN: ${{ secrets.TFC_TOKEN }}
       TFC_ORG: ${{ secrets.TFC_ORG }}
       TF_TOKEN_app_terraform_io: ${{ secrets.TFC_TOKEN }}
-      TF_WORKSPACE: ${{ needs.workspace.outputs.workspace_name }}
+      TF_WORKSPACE: ${{ inputs.workspace_suffix != '' && inputs.workspace_suffix || github.run_id }}
       AWS_REGION: ${{ inputs.region != '' && inputs.region || secrets.AWS_REGION }}
       WORKSPACE_SUFFIX: ${{ inputs.workspace_suffix != '' && inputs.workspace_suffix || github.run_id }}
       CLUSTER_NAME_OVERRIDE: ${{ inputs.cluster_name }}
@@ -101,6 +110,7 @@ jobs:
       - name: Terraform init
         run: |
           terraform init \
+            -input=false \
             -backend-config="organization=${TFC_ORG}"
 
       - name: Terraform plan
@@ -122,7 +132,7 @@ jobs:
       TFC_TOKEN: ${{ secrets.TFC_TOKEN }}
       TFC_ORG: ${{ secrets.TFC_ORG }}
       TF_TOKEN_app_terraform_io: ${{ secrets.TFC_TOKEN }}
-      TF_WORKSPACE: ${{ needs.workspace.outputs.workspace_name }}
+      TF_WORKSPACE: ${{ inputs.workspace_suffix != '' && inputs.workspace_suffix || github.run_id }}
       AWS_REGION: ${{ inputs.region != '' && inputs.region || secrets.AWS_REGION }}
       WORKSPACE_SUFFIX: ${{ inputs.workspace_suffix != '' && inputs.workspace_suffix || github.run_id }}
       CLUSTER_NAME_OVERRIDE: ${{ inputs.cluster_name }}
@@ -146,6 +156,7 @@ jobs:
       - name: Terraform init
         run: |
           terraform init \
+            -input=false \
             -backend-config="organization=${TFC_ORG}"
 
       - name: Terraform apply
