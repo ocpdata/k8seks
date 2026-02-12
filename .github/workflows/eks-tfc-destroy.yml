@@ -70,6 +70,7 @@ jobs:
       TFC_TOKEN: ${{ secrets.TFC_TOKEN }}
       TFC_ORG: ${{ secrets.TFC_ORG }}
       TF_TOKEN_app_terraform_io: ${{ secrets.TFC_TOKEN }}
+      TF_WORKSPACE: ${{ needs.workspace.outputs.workspace_name }}
       AWS_REGION: ${{ inputs.region != '' && inputs.region || secrets.AWS_REGION }}
       WORKSPACE_SUFFIX: ${{ inputs.workspace_suffix != '' && inputs.workspace_suffix || github.run_id }}
       CLUSTER_NAME_OVERRIDE: ${{ inputs.cluster_name }}
@@ -114,6 +115,7 @@ jobs:
       TFC_TOKEN: ${{ secrets.TFC_TOKEN }}
       TFC_ORG: ${{ secrets.TFC_ORG }}
       TF_TOKEN_app_terraform_io: ${{ secrets.TFC_TOKEN }}
+      TF_WORKSPACE: ${{ needs.workspace.outputs.workspace_name }}
       AWS_REGION: ${{ inputs.region != '' && inputs.region || secrets.AWS_REGION }}
       WORKSPACE_SUFFIX: ${{ inputs.workspace_suffix != '' && inputs.workspace_suffix || github.run_id }}
       CLUSTER_NAME_OVERRIDE: ${{ inputs.cluster_name }}
@@ -150,3 +152,32 @@ jobs:
           terraform destroy -auto-approve \
             -var="aws_region=${AWS_REGION}" \
             -var="cluster_name=${CLUSTER_NAME}"
+
+      - name: Delete Terraform Cloud workspace
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -z "${TFC_TOKEN}" ] || [ -z "${TFC_ORG}" ]; then
+            echo "TFC_TOKEN and TFC_ORG must be set."
+            exit 1
+          fi
+
+          API="https://app.terraform.io/api/v2/organizations/${TFC_ORG}/workspaces/${WORKSPACE_NAME}"
+          STATUS=$(curl -s -o /tmp/ws_delete.json -w "%{http_code}" \
+            -H "Authorization: Bearer ${TFC_TOKEN}" \
+            -H "Content-Type: application/vnd.api+json" \
+            -X DELETE \
+            "${API}")
+
+          if [ "${STATUS}" = "204" ]; then
+            echo "Workspace ${WORKSPACE_NAME} deleted."
+            exit 0
+          fi
+
+          if [ "${STATUS}" = "404" ]; then
+            echo "Workspace ${WORKSPACE_NAME} not found."
+            exit 0
+          fi
+
+          echo "Failed to delete workspace ${WORKSPACE_NAME} (status ${STATUS})."
+          exit 1
