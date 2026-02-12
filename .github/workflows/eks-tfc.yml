@@ -3,9 +3,6 @@ name: eks-tfc
 on:
   workflow_dispatch:
     inputs:
-      workspace_suffix:
-        description: "Suffix for Terraform Cloud workspace name"
-        required: false
       cluster_name:
         description: "Optional EKS cluster name override"
         required: false
@@ -20,14 +17,23 @@ on:
         options:
           - "false"
           - "true"
+      enable_cine:
+        description: "Deploy cine app (true/false)"
+        required: false
+        default: "false"
+        type: choice
+        options:
+          - "false"
+          - "true"
       terraform_target:
-        description: "Target specific module (leave empty for all, or module.eks, module.nginx)"
+        description: "Target specific module (leave empty for all)"
         required: false
         type: choice
         options:
           - ""
           - "module.eks"
           - "module.nginx"
+          - "module.cine"
 
 permissions:
   contents: write
@@ -141,6 +147,7 @@ jobs:
           fi
 
           ENABLE_NGINX="${{ inputs.enable_nginx }}"
+          ENABLE_CINE="${{ inputs.enable_cine }}"
           TERRAFORM_TARGET="${{ inputs.terraform_target }}"
 
           # Build terraform plan command
@@ -149,11 +156,12 @@ jobs:
             PLAN_CMD="${PLAN_CMD} -target=${TERRAFORM_TARGET}"
           fi
 
-          # Deploy EKS cluster with optional NGINX Plus
+          # Deploy EKS cluster with optional NGINX Plus and Cine
           ${PLAN_CMD} \
             -var="aws_region=${AWS_REGION}" \
             -var="cluster_name=${CLUSTER_NAME}" \
             -var="enable_nginx=${ENABLE_NGINX}" \
+            -var="enable_cine=${ENABLE_CINE}" \
             -var="nginx_repo_crt=${NGINX_REPO_CRT:-}" \
             -var="nginx_repo_key=${NGINX_REPO_KEY:-}" \
             -var="license_jwt=${LICENSE_JWT:-}" \
@@ -166,16 +174,16 @@ jobs:
 
   apply-eks:
     runs-on: ubuntu-latest
-    needs: [prep, workspace, plan]
+    needs: [prep, plan]
+    if: inputs.terraform_target != 'module.nginx' && inputs.terraform_target != 'module.cine'
     env:
       TFC_TOKEN: ${{ secrets.TFC_TOKEN }}
       TFC_ORG: ${{ secrets.TFC_ORG }}
       TF_TOKEN_app_terraform_io: ${{ secrets.TFC_TOKEN }}
-      TF_WORKSPACE: ${{ inputs.workspace_suffix != '' && inputs.workspace_suffix || github.run_id }}
+      TF_WORKSPACE: k8seks
       AWS_REGION: ${{ inputs.region != '' && inputs.region || secrets.AWS_REGION }}
-      WORKSPACE_SUFFIX: ${{ inputs.workspace_suffix != '' && inputs.workspace_suffix || github.run_id }}
+      WORKSPACE_SUFFIX: k8seks
       CLUSTER_NAME_OVERRIDE: ${{ inputs.cluster_name }}
-      WORKSPACE_NAME: ${{ needs.workspace.outputs.workspace_name }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -215,34 +223,18 @@ jobs:
             -var="cluster_name=${CLUSTER_NAME}" \
             -var="enable_nginx=false"
 
-      - name: Save workspace suffix to file
-        shell: bash
-        run: |
-          echo "${WORKSPACE_SUFFIX}" > .tfworkspace
-
-      - name: Commit and push workspace file
-        shell: bash
-        run: |
-          git config user.email "github-actions@github.com"
-          git config user.name "GitHub Actions"
-          git add .tfworkspace
-          git commit -m "Save workspace: eks-${WORKSPACE_SUFFIX}" || echo "No changes to commit"
-          git pull --rebase origin main || echo "Nothing to pull"
-          git push origin main || echo "Push failed"
-
   apply-nginx:
     runs-on: ubuntu-latest
-    needs: [prep, workspace, plan, apply-eks]
-    if: inputs.enable_nginx == 'true'
+    needs: [prep, plan, apply-eks]
+    if: ${{ always() && inputs.enable_nginx == 'true' && (inputs.terraform_target == 'module.nginx' || needs.apply-eks.result == 'success') && inputs.terraform_target != 'module.eks' && inputs.terraform_target != 'module.cine' }}
     env:
       TFC_TOKEN: ${{ secrets.TFC_TOKEN }}
       TFC_ORG: ${{ secrets.TFC_ORG }}
       TF_TOKEN_app_terraform_io: ${{ secrets.TFC_TOKEN }}
-      TF_WORKSPACE: ${{ inputs.workspace_suffix != '' && inputs.workspace_suffix || github.run_id }}
+      TF_WORKSPACE: k8seks
       AWS_REGION: ${{ inputs.region != '' && inputs.region || secrets.AWS_REGION }}
-      WORKSPACE_SUFFIX: ${{ inputs.workspace_suffix != '' && inputs.workspace_suffix || github.run_id }}
+      WORKSPACE_SUFFIX: k8seks
       CLUSTER_NAME_OVERRIDE: ${{ inputs.cluster_name }}
-      WORKSPACE_NAME: ${{ needs.workspace.outputs.workspace_name }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -282,7 +274,7 @@ jobs:
             -var="cluster_name=${CLUSTER_NAME}" \
             -var="enable_nginx=true" \
             -var="nginx_repo_crt=${NGINX_REPO_CRT:-}" \
-            -var="nginx_repo_key=${NGINX_REPO_KEY:-}" \
+            -var="nginx_repo_key=${NGINX_RE PO_KEY:-}" \
             -var="license_jwt=${LICENSE_JWT:-}" \
             -var="data_plane_key=${DATA_PLANE_KEY:-}"
         env:
@@ -290,3 +282,54 @@ jobs:
           NGINX_REPO_KEY: ${{ secrets.NGINX_REPO_KEY }}
           LICENSE_JWT: ${{ secrets.LICENSE_JWT }}
           DATA_PLANE_KEY: ${{ secrets.DATA_PLANE_KEY }}
+
+  apply-cine:
+    runs-on: ubuntu-latest
+    needs: [prep, plan, apply-eks]
+    if: ${{ always() && inputs.enable_cine == 'true' && (inputs.terraform_target == 'module.cine' || needs.apply-eks.result == 'success') && inputs.terraform_target != 'module.eks' && inputs.terraform_target != 'module.nginx' }}
+    env:
+      TFC_TOKEN: ${{ secrets.TFC_TOKEN }}
+      TFC_ORG: ${{ secrets.TFC_ORG }}
+      TF_TOKEN_app_terraform_io: ${{ secrets.TFC_TOKEN }}
+      TF_WORKSPACE: k8seks
+      AWS_REGION: ${{ inputs.region != '' && inputs.region || secrets.AWS_REGION }}
+      WORKSPACE_SUFFIX: k8seks
+      CLUSTER_NAME_OVERRIDE: ${{ inputs.cluster_name }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_wrapper: false
+
+      - name: Terraform init
+        run: |
+          terraform init \
+            -input=false \
+            -backend-config="organization=${TFC_ORG}"
+
+      - name: Terraform apply (Cine App)
+        run: |
+          if [ -n "${CLUSTER_NAME_OVERRIDE}" ]; then
+            CLUSTER_NAME="${CLUSTER_NAME_OVERRIDE}"
+          else
+            CLUSTER_NAME="eks-${WORKSPACE_SUFFIX}"
+          fi
+
+          terraform apply -auto-approve \
+            -target=module.cine \
+            -var="aws_region=${AWS_REGION}" \
+            -var="cluster_name=${CLUSTER_NAME}" \
+            -var="enable_cine=true"

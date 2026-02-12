@@ -40,8 +40,8 @@ Configura los siguientes secretos en tu repositorio:
 ├── variables.tf              # Variables raíz
 ├── versions.tf               # Configuración de versiones y backend
 ├── outputs.tf                # Outputs combinados
-├── .tfworkspace              # Workspace suffix (generado)
-├── modules/
+├── modules
+/
 │   ├── eks/
 │   │   ├── main.tf          # VPC + EKS cluster
 │   │   ├── variables.tf     # Variables EKS

@@ -3,9 +3,6 @@ name: eks-tfc-destroy
 on:
   workflow_dispatch:
     inputs:
-      workspace_suffix:
-        description: "Suffix for Terraform Cloud workspace name"
-        required: false
       cluster_name:
         description: "Optional EKS cluster name override"
         required: false
@@ -28,69 +25,17 @@ jobs:
         env:
           AWS_REGION: ${{ inputs.region != '' && inputs.region || secrets.AWS_REGION }}
 
-  workspace:
-    runs-on: ubuntu-latest
-    needs: prep
-    outputs:
-      workspace_name: ${{ steps.workspace.outputs.workspace_name }}
-      workspace_suffix: ${{ steps.workspace.outputs.workspace_suffix }}
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Resolve Terraform Cloud workspace
-        id: workspace
-        shell: bash
-        run: |
-          set -euo pipefail
-          if [ -z "${TFC_TOKEN}" ] || [ -z "${TFC_ORG}" ]; then
-            echo "TFC_TOKEN and TFC_ORG must be set."
-            exit 1
-          fi
-
-          if [ ! -f .tfworkspace ]; then
-            echo "No .tfworkspace file found. Run eks-tfc.yml first."
-            exit 1
-          fi
-
-          WORKSPACE_SUFFIX=$(cat .tfworkspace | tr -d ' \n')
-          WORKSPACE_NAME="eks-${WORKSPACE_SUFFIX}"
-
-          API="https://app.terraform.io/api/v2/organizations/${TFC_ORG}/workspaces/${WORKSPACE_NAME}"
-          STATUS=$(curl -s -o /tmp/ws.json -w "%{http_code}" \
-            -H "Authorization: Bearer ${TFC_TOKEN}" \
-            -H "Content-Type: application/vnd.api+json" \
-            "${API}")
-
-          if [ "${STATUS}" = "200" ]; then
-            echo "Workspace ${WORKSPACE_NAME} exists"
-          elif [ "${STATUS}" = "404" ]; then
-            echo "Workspace ${WORKSPACE_NAME} does not exist."
-            exit 1
-          else
-            echo "Failed to query workspace ${WORKSPACE_NAME} (status ${STATUS})."
-            cat /tmp/ws.json
-            exit 1
-          fi
-
-          echo "workspace_name=${WORKSPACE_NAME}" >> "$GITHUB_OUTPUT"
-          echo "workspace_suffix=${WORKSPACE_SUFFIX}" >> "$GITHUB_OUTPUT"
-        env:
-          TFC_TOKEN: ${{ secrets.TFC_TOKEN }}
-          TFC_ORG: ${{ secrets.TFC_ORG }}
-
   plan-destroy:
     runs-on: ubuntu-latest
-    needs: [prep, workspace]
+    needs: [prep]
     env:
       TFC_TOKEN: ${{ secrets.TFC_TOKEN }}
       TFC_ORG: ${{ secrets.TFC_ORG }}
       TF_TOKEN_app_terraform_io: ${{ secrets.TFC_TOKEN }}
-      TF_WORKSPACE: ${{ needs.workspace.outputs.workspace_suffix }}
+      TF_WORKSPACE: k8seks
       AWS_REGION: ${{ inputs.region != '' && inputs.region || secrets.AWS_REGION }}
-      WORKSPACE_SUFFIX: ${{ needs.workspace.outputs.workspace_suffix }}
+      WORKSPACE_SUFFIX: k8seks
       CLUSTER_NAME_OVERRIDE: ${{ inputs.cluster_name }}
-      WORKSPACE_NAME: ${{ needs.workspace.outputs.workspace_name }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -128,16 +73,15 @@ jobs:
 
   destroy:
     runs-on: ubuntu-latest
-    needs: [prep, workspace, plan-destroy]
+    needs: [prep, plan-destroy]
     env:
       TFC_TOKEN: ${{ secrets.TFC_TOKEN }}
       TFC_ORG: ${{ secrets.TFC_ORG }}
       TF_TOKEN_app_terraform_io: ${{ secrets.TFC_TOKEN }}
-      TF_WORKSPACE: ${{ needs.workspace.outputs.workspace_suffix }}
+      TF_WORKSPACE: k8seks
       AWS_REGION: ${{ inputs.region != '' && inputs.region || secrets.AWS_REGION }}
-      WORKSPACE_SUFFIX: ${{ needs.workspace.outputs.workspace_suffix }}
+      WORKSPACE_SUFFIX: k8seks
       CLUSTER_NAME_OVERRIDE: ${{ inputs.cluster_name }}
-      WORKSPACE_NAME: ${{ needs.workspace.outputs.workspace_name }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -182,6 +126,7 @@ jobs:
             exit 1
           fi
 
+          WORKSPACE_NAME="eks-${WORKSPACE_SUFFIX}"
           API="https://app.terraform.io/api/v2/organizations/${TFC_ORG}/workspaces/${WORKSPACE_NAME}"
           STATUS=$(curl -s -o /tmp/ws_delete.json -w "%{http_code}" \
             -H "Authorization: Bearer ${TFC_TOKEN}" \

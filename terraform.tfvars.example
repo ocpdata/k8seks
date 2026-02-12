@@ -61,6 +61,21 @@ data_plane_key          = ""
 nginx_helm_values       = ""
 
 # ============================================================================
+# Cine App Configuration
+# ============================================================================
+
+enable_cine              = false
+cine_namespace           = "cine"
+cine_image               = "node:20-alpine"
+cine_replicas            = 1
+cine_container_port      = 3000
+cine_service_port        = 80
+cine_ingress_enabled     = true
+cine_ingress_host        = "cine.example.com"
+cine_ingress_path        = "/"
+cine_ingress_class_name  = "nginx"
+
+# ============================================================================
 # Tags
 # ============================================================================
 
