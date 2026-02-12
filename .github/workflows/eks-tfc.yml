@@ -156,13 +156,15 @@ jobs:
             -var="enable_nginx=${ENABLE_NGINX}" \
             -var="nginx_repo_crt=${NGINX_REPO_CRT:-}" \
             -var="nginx_repo_key=${NGINX_REPO_KEY:-}" \
-            -var="license_jwt=${LICENSE_JWT:-}"
+            -var="license_jwt=${LICENSE_JWT:-}" \
+            -var="data_plane_key=${DATA_PLANE_KEY:-}"
         env:
           NGINX_REPO_CRT: ${{ secrets.NGINX_REPO_CRT }}
           NGINX_REPO_KEY: ${{ secrets.NGINX_REPO_KEY }}
           LICENSE_JWT: ${{ secrets.LICENSE_JWT }}
+          DATA_PLANE_KEY: ${{ secrets.DATA_PLANE_KEY }}
 
-  apply:
+  apply-eks:
     runs-on: ubuntu-latest
     needs: [prep, workspace, plan]
     env:
@@ -199,7 +201,7 @@ jobs:
             -input=false \
             -backend-config="organization=${TFC_ORG}"
 
-      - name: Terraform apply
+      - name: Terraform apply (EKS Cluster)
         run: |
           if [ -n "${CLUSTER_NAME_OVERRIDE}" ]; then
             CLUSTER_NAME="${CLUSTER_NAME_OVERRIDE}"
@@ -207,26 +209,11 @@ jobs:
             CLUSTER_NAME="eks-${WORKSPACE_SUFFIX}"
           fi
 
-          ENABLE_NGINX="${{ inputs.enable_nginx }}"
-          TERRAFORM_TARGET="${{ inputs.terraform_target }}"
-
-          # Build terraform apply command
-          APPLY_CMD="terraform apply -auto-approve"
-          if [ -n "${TERRAFORM_TARGET}" ]; then
-            APPLY_CMD="${APPLY_CMD} -target=${TERRAFORM_TARGET}"
-          fi
-
-          ${APPLY_CMD} \
+          terraform apply -auto-approve \
+            -target=module.eks \
             -var="aws_region=${AWS_REGION}" \
             -var="cluster_name=${CLUSTER_NAME}" \
-            -var="enable_nginx=${ENABLE_NGINX}" \
-            -var="nginx_repo_crt=${NGINX_REPO_CRT:-}" \
-            -var="nginx_repo_key=${NGINX_REPO_KEY:-}" \
-            -var="license_jwt=${LICENSE_JWT:-}"
-        env:
-          NGINX_REPO_CRT: ${{ secrets.NGINX_REPO_CRT }}
-          NGINX_REPO_KEY: ${{ secrets.NGINX_REPO_KEY }}
-          LICENSE_JWT: ${{ secrets.LICENSE_JWT }}
+            -var="enable_nginx=false"
 
       - name: Save workspace suffix to file
         shell: bash
@@ -242,3 +229,64 @@ jobs:
           git commit -m "Save workspace: eks-${WORKSPACE_SUFFIX}" || echo "No changes to commit"
           git pull --rebase origin main || echo "Nothing to pull"
           git push origin main || echo "Push failed"
+
+  apply-nginx:
+    runs-on: ubuntu-latest
+    needs: [prep, workspace, plan, apply-eks]
+    if: inputs.enable_nginx == 'true'
+    env:
+      TFC_TOKEN: ${{ secrets.TFC_TOKEN }}
+      TFC_ORG: ${{ secrets.TFC_ORG }}
+      TF_TOKEN_app_terraform_io: ${{ secrets.TFC_TOKEN }}
+      TF_WORKSPACE: ${{ inputs.workspace_suffix != '' && inputs.workspace_suffix || github.run_id }}
+      AWS_REGION: ${{ inputs.region != '' && inputs.region || secrets.AWS_REGION }}
+      WORKSPACE_SUFFIX: ${{ inputs.workspace_suffix != '' && inputs.workspace_suffix || github.run_id }}
+      CLUSTER_NAME_OVERRIDE: ${{ inputs.cluster_name }}
+      WORKSPACE_NAME: ${{ needs.workspace.outputs.workspace_name }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_wrapper: false
+
+      - name: Terraform init
+        run: |
+          terraform init \
+            -input=false \
+            -backend-config="organization=${TFC_ORG}"
+
+      - name: Terraform apply (NGINX Plus)
+        run: |
+          if [ -n "${CLUSTER_NAME_OVERRIDE}" ]; then
+            CLUSTER_NAME="${CLUSTER_NAME_OVERRIDE}"
+          else
+            CLUSTER_NAME="eks-${WORKSPACE_SUFFIX}"
+          fi
+
+          terraform apply -auto-approve \
+            -target=module.nginx \
+            -var="aws_region=${AWS_REGION}" \
+            -var="cluster_name=${CLUSTER_NAME}" \
+            -var="enable_nginx=true" \
+            -var="nginx_repo_crt=${NGINX_REPO_CRT:-}" \
+            -var="nginx_repo_key=${NGINX_REPO_KEY:-}" \
+            -var="license_jwt=${LICENSE_JWT:-}" \
+            -var="data_plane_key=${DATA_PLANE_KEY:-}"
+        env:
+          NGINX_REPO_CRT: ${{ secrets.NGINX_REPO_CRT }}
+          NGINX_REPO_KEY: ${{ secrets.NGINX_REPO_KEY }}
+          LICENSE_JWT: ${{ secrets.LICENSE_JWT }}
+          DATA_PLANE_KEY: ${{ secrets.DATA_PLANE_KEY }}
