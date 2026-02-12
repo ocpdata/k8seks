@@ -48,7 +48,7 @@ jobs:
             exit 1
           fi
 
-          WORKSPACE_NAME="eks-${WORKSPACE_SUFFIX}"
+          WORKSPACE_NAME="${WORKSPACE_SUFFIX}"
 
           API="https://app.terraform.io/api/v2/organizations/${TFC_ORG}/workspaces/${WORKSPACE_NAME}"
           STATUS=$(curl -s -o /tmp/ws.json -w "%{http_code}" \
@@ -101,7 +101,7 @@ jobs:
           if [ -n "${CLUSTER_NAME_OVERRIDE}" ]; then
             CLUSTER_NAME="${CLUSTER_NAME_OVERRIDE}"
           else
-            CLUSTER_NAME="${WORKSPACE_NAME}"
+            CLUSTER_NAME="eks-${WORKSPACE_SUFFIX}"
           fi
 
           terraform plan -destroy \
@@ -146,7 +146,7 @@ jobs:
           if [ -n "${CLUSTER_NAME_OVERRIDE}" ]; then
             CLUSTER_NAME="${CLUSTER_NAME_OVERRIDE}"
           else
-            CLUSTER_NAME="${WORKSPACE_NAME}"
+            CLUSTER_NAME="eks-${WORKSPACE_SUFFIX}"
           fi
 
           terraform destroy -auto-approve \
