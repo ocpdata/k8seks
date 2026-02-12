@@ -1,46 +1,30 @@
-provider "aws" {
-  region = var.aws_region
-}
-
-data "aws_availability_zones" "available" {}
-
-locals {
-  azs = slice(data.aws_availability_zones.available.names, 0, 3)
-}
-
-module "vpc" {
-  source  = "terraform-aws-modules/vpc/aws"
-  version = "5.5.1"
-
-  name = "${var.cluster_name}-vpc"
-  cidr = var.vpc_cidr
-
-  azs             = local.azs
-  private_subnets = [for i in range(length(local.azs)) : cidrsubnet(var.vpc_cidr, 4, i)]
-  public_subnets  = [for i in range(length(local.azs)) : cidrsubnet(var.vpc_cidr, 4, i + 4)]
-
-  enable_nat_gateway = true
-  single_nat_gateway = true
-}
-
+# EKS Cluster Module
 module "eks" {
-  source  = "terraform-aws-modules/eks/aws"
-  version = "20.24.0"
+  source = "./modules/eks"
 
-  cluster_name    = var.cluster_name
-  cluster_version = var.kubernetes_version
+  aws_region         = var.aws_region
+  cluster_name       = var.cluster_name
+  kubernetes_version = var.kubernetes_version
+  vpc_cidr           = var.vpc_cidr
+  instance_types     = var.instance_types
+  min_size           = var.min_size
+  max_size           = var.max_size
+  desired_size       = var.desired_size
 
-  vpc_id     = module.vpc.vpc_id
-  subnet_ids = module.vpc.private_subnets
-
-  enable_irsa = true
-
-  eks_managed_node_groups = {
-    default = {
-      instance_types = ["t3.medium"]
-      min_size       = 1
-      max_size       = 3
-      desired_size   = 2
-    }
-  }
+  tags = var.tags
 }
+
+# NGINX Plus Module (optional)
+module "nginx" {
+  source = "./modules/nginx"
+
+  enabled       = var.enable_nginx
+  namespace     = var.nginx_namespace
+  chart_version = var.nginx_chart_version
+  helm_values   = var.nginx_helm_values
+
+  tags = var.tags
+
+  depends_on = [module.eks]
+}
+

@@ -138,9 +138,12 @@ jobs:
             CLUSTER_NAME="eks-${WORKSPACE_SUFFIX}"
           fi
 
+          # Deploy only EKS cluster (enable_nginx=false)
+          # To enable NGINX Plus: change to -var="enable_nginx=true"
           terraform plan \
             -var="aws_region=${AWS_REGION}" \
-            -var="cluster_name=${CLUSTER_NAME}"
+            -var="cluster_name=${CLUSTER_NAME}" \
+            -var="enable_nginx=false"
 
   apply:
     runs-on: ubuntu-latest
@@ -186,4 +189,5 @@ jobs:
 
           terraform apply -auto-approve \
             -var="aws_region=${AWS_REGION}" \
-            -var="cluster_name=${CLUSTER_NAME}"
+            -var="cluster_name=${CLUSTER_NAME}" \
+            -var="enable_nginx=false"

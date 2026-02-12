@@ -123,7 +123,8 @@ jobs:
 
           terraform plan -destroy \
             -var="aws_region=${AWS_REGION}" \
-            -var="cluster_name=${CLUSTER_NAME}"
+            -var="cluster_name=${CLUSTER_NAME}" \
+            -var="enable_nginx=false"
 
   destroy:
     runs-on: ubuntu-latest
@@ -169,7 +170,8 @@ jobs:
 
           terraform destroy -auto-approve \
             -var="aws_region=${AWS_REGION}" \
-            -var="cluster_name=${CLUSTER_NAME}"
+            -var="cluster_name=${CLUSTER_NAME}" \
+            -var="enable_nginx=false"
 
       - name: Delete Terraform Cloud workspace
         shell: bash
