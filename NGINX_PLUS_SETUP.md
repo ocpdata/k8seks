@@ -54,6 +54,8 @@ eyJhbGciOiJ...
 2. Settings → Secrets and variables → Actions
 3. Haz clic en "New repository secret"
 
+**IMPORTANTE**: NGINX One Agent requiere **ambos secretos** (`LICENSE_JWT` y `DATA_PLANE_KEY`) para funcionar correctamente.
+
 ### Crear Secret: NGINX_REPO_CRT
 
 - **Name**: `NGINX_REPO_CRT`
@@ -90,6 +92,18 @@ Haz clic en "Add secret"
 Ejemplo:
 ```
 eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+```
+
+Haz clic en "Add secret"
+
+### Crear Secret: DATA_PLANE_KEY
+
+- **Name**: `DATA_PLANE_KEY`
+- **Secret**: Copia el API key del data plane de NGINX One Agent
+
+Ejemplo:
+```
+a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6
 ```
 
 Haz clic en "Add secret"

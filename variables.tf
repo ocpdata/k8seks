@@ -97,6 +97,13 @@ variable "license_jwt" {
   sensitive   = true
 }
 
+variable "data_plane_key" {
+  description = "NGINX One Agent data plane API key."
+  type        = string
+  default     = ""
+  sensitive   = true
+}
+
 variable "enable_nginx_one_agent" {
   description = "Enable NGINX One Agent for observability."
   type        = bool

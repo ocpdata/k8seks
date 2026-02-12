@@ -25,6 +25,7 @@ module "nginx" {
   nginx_repo_crt           = var.nginx_repo_crt
   nginx_repo_key           = var.nginx_repo_key
   license_jwt              = var.license_jwt
+  data_plane_key           = var.data_plane_key
   enable_nginx_one_agent   = var.enable_nginx_one_agent
 
   tags = var.tags

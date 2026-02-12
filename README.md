@@ -23,6 +23,7 @@ Configura los siguientes secretos en tu repositorio:
 - `NGINX_REPO_CRT`: Contenido del archivo `nginx-repo.crt` (certificado de repositorio)
 - `NGINX_REPO_KEY`: Contenido del archivo `nginx-repo.key` (clave privada de repositorio)
 - `LICENSE_JWT`: Token JWT de licencia NGINX One Agent
+- `DATA_PLANE_KEY`: API key del data plane para conectarse a NGINX One Agent
 
 ### Dependencias
 - Terraform >= 1.5.0

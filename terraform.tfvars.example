@@ -46,9 +46,11 @@ enable_nginx_one_agent    = true
 nginx_repo_crt          = ""
 nginx_repo_key          = ""
 
-# NGINX One Agent license JWT (from NGINX subscription)
+# NGINX One Agent license JWT and data plane key (from NGINX subscription)
 # license_jwt = file("${path.root}/.nginx/license.jwt")
+# data_plane_key = "api-key-string"
 license_jwt             = ""
+data_plane_key          = ""
 
 # Additional Helm values (YAML as string)
 nginx_helm_values       = ""

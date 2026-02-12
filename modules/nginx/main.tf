@@ -47,9 +47,9 @@ resource "kubernetes_secret" "nginx_registry" {
   depends_on = [kubernetes_namespace.nginx]
 }
 
-# Create secret for NGINX One Agent license
+# Create secret for NGINX One Agent license and data plane key
 resource "kubernetes_secret" "nginx_license" {
-  count = var.enabled && var.license_jwt != "" ? 1 : 0
+  count = var.enabled && (var.license_jwt != "" || var.data_plane_key != "") ? 1 : 0
 
   metadata {
     name      = "nginx-license"
@@ -59,7 +59,8 @@ resource "kubernetes_secret" "nginx_license" {
   type = "Opaque"
 
   data = {
-    "license.jwt" = var.license_jwt
+    "license.jwt"     = var.license_jwt
+    "data.plane.key"  = var.data_plane_key
   }
 
   depends_on = [kubernetes_namespace.nginx]
@@ -100,12 +101,28 @@ resource "helm_release" "nginx" {
     value = "LoadBalancer"
   }
 
-  # Configure NGINX One Agent if license provided
+  # Configure NGINX One Agent if license and data plane key provided
   dynamic "set" {
-    for_each = var.license_jwt != "" ? [1] : []
+    for_each = var.license_jwt != "" && var.data_plane_key != "" ? [1] : []
     content {
       name  = "nginxOneAgent.enabled"
       value = var.enable_nginx_one_agent
+    }
+  }
+
+  dynamic "set" {
+    for_each = var.license_jwt != "" && var.data_plane_key != "" ? [1] : []
+    content {
+      name  = "nginxOneAgent.licenseSecret"
+      value = "nginx-license"
+    }
+  }
+
+  dynamic "set" {
+    for_each = var.license_jwt != "" && var.data_plane_key != "" ? [1] : []
+    content {
+      name  = "nginxOneAgent.dataPlaneKeySecret"
+      value = "nginx-license"
     }
   }
 
