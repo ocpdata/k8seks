@@ -76,6 +76,33 @@ variable "nginx_helm_values" {
   default     = ""
 }
 
+variable "nginx_repo_crt" {
+  description = "NGINX repository certificate (from nginx-repo.crt)."
+  type        = string
+  default     = ""
+  sensitive   = true
+}
+
+variable "nginx_repo_key" {
+  description = "NGINX repository key (from nginx-repo.key)."
+  type        = string
+  default     = ""
+  sensitive   = true
+}
+
+variable "license_jwt" {
+  description = "NGINX One Agent license JWT token."
+  type        = string
+  default     = ""
+  sensitive   = true
+}
+
+variable "enable_nginx_one_agent" {
+  description = "Enable NGINX One Agent for observability."
+  type        = bool
+  default     = true
+}
+
 # ============================================================================
 # Root Variables - Tags
 # ============================================================================

@@ -124,12 +124,20 @@ jobs:
             CLUSTER_NAME="eks-${WORKSPACE_SUFFIX}"
           fi
 
-          # Deploy only EKS cluster (enable_nginx=false)
-          # To enable NGINX Plus: change to -var="enable_nginx=true"
+          # Deploy EKS cluster with optional NGINX Plus
+          # By default: NGINX Plus disabled (enable_nginx=false)
+          # To enable: use enable_nginx=true with NGINX credentials
           terraform plan \
             -var="aws_region=${AWS_REGION}" \
             -var="cluster_name=${CLUSTER_NAME}" \
-            -var="enable_nginx=false"
+            -var="enable_nginx=false" \
+            -var="nginx_repo_crt=${NGINX_REPO_CRT:-}" \
+            -var="nginx_repo_key=${NGINX_REPO_KEY:-}" \
+            -var="license_jwt=${LICENSE_JWT:-}"
+        env:
+          NGINX_REPO_CRT: ${{ secrets.NGINX_REPO_CRT }}
+          NGINX_REPO_KEY: ${{ secrets.NGINX_REPO_KEY }}
+          LICENSE_JWT: ${{ secrets.LICENSE_JWT }}
 
   apply:
     runs-on: ubuntu-latest
@@ -179,7 +187,14 @@ jobs:
           terraform apply -auto-approve \
             -var="aws_region=${AWS_REGION}" \
             -var="cluster_name=${CLUSTER_NAME}" \
-            -var="enable_nginx=false"
+            -var="enable_nginx=false" \
+            -var="nginx_repo_crt=${NGINX_REPO_CRT:-}" \
+            -var="nginx_repo_key=${NGINX_REPO_KEY:-}" \
+            -var="license_jwt=${LICENSE_JWT:-}"
+        env:
+          NGINX_REPO_CRT: ${{ secrets.NGINX_REPO_CRT }}
+          NGINX_REPO_KEY: ${{ secrets.NGINX_REPO_KEY }}
+          LICENSE_JWT: ${{ secrets.LICENSE_JWT }}
 
       - name: Save workspace suffix to file
         shell: bash

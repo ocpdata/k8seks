@@ -12,3 +12,23 @@ output "release_status" {
   description = "NGINX Plus Helm release status."
   value       = try(helm_release.nginx[0].status, null)
 }
+
+output "release_version" {
+  description = "NGINX Plus Helm release version."
+  value       = try(helm_release.nginx[0].version, null)
+}
+
+output "license_secret_name" {
+  description = "Name of the Kubernetes secret containing NGINX One Agent license."
+  value       = try(kubernetes_secret.nginx_license[0].metadata[0].name, null)
+}
+
+output "nginx_enabled" {
+  description = "Whether NGINX Plus deployment is enabled."
+  value       = var.enabled
+}
+
+output "nginx_one_agent_enabled" {
+  description = "Whether NGINX One Agent is enabled."
+  value       = var.enable_nginx_one_agent
+}

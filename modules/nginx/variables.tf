@@ -10,14 +10,53 @@ variable "namespace" {
   default     = "nginx"
 }
 
+variable "helm_repository" {
+  description = "NGINX Helm repository URL."
+  type        = string
+  default     = "https://helm.nginx.com/stable"
+}
+
+variable "helm_chart" {
+  description = "NGINX Helm chart name."
+  type        = string
+  default     = "nginx-ingress"
+}
+
 variable "chart_version" {
   description = "NGINX Ingress Controller Helm chart version."
   type        = string
   default     = "1.0.0"
 }
 
+variable "nginx_repo_crt" {
+  description = "NGINX repository certificate (from nginx-repo.crt)."
+  type        = string
+  default     = ""
+  sensitive   = true
+}
+
+variable "nginx_repo_key" {
+  description = "NGINX repository key (from nginx-repo.key)."
+  type        = string
+  default     = ""
+  sensitive   = true
+}
+
+variable "license_jwt" {
+  description = "NGINX One Agent license JWT token."
+  type        = string
+  default     = ""
+  sensitive   = true
+}
+
+variable "enable_nginx_one_agent" {
+  description = "Enable NGINX One Agent for observability."
+  type        = bool
+  default     = true
+}
+
 variable "helm_values" {
-  description = "Helm values for NGINX Plus deployment (YAML string)."
+  description = "Additional Helm values for NGINX deployment (YAML string)."
   type        = string
   default     = ""
 }

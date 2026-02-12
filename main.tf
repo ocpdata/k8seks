@@ -18,10 +18,14 @@ module "eks" {
 module "nginx" {
   source = "./modules/nginx"
 
-  enabled       = var.enable_nginx
-  namespace     = var.nginx_namespace
-  chart_version = var.nginx_chart_version
-  helm_values   = var.nginx_helm_values
+  enabled                  = var.enable_nginx
+  namespace                = var.nginx_namespace
+  chart_version            = var.nginx_chart_version
+  helm_values              = var.nginx_helm_values
+  nginx_repo_crt           = var.nginx_repo_crt
+  nginx_repo_key           = var.nginx_repo_key
+  license_jwt              = var.license_jwt
+  enable_nginx_one_agent   = var.enable_nginx_one_agent
 
   tags = var.tags
 
