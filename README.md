@@ -19,6 +19,11 @@ Configura los siguientes secretos en tu repositorio:
 - `AWS_ACCESS_KEY_ID`: Credenciales AWS
 - `AWS_SECRET_ACCESS_KEY`: Credenciales AWS
 
+**Para NGINX Plus con NGINX One Agent**:
+- `NGINX_REPO_CRT`: Contenido del archivo `nginx-repo.crt` (certificado de repositorio)
+- `NGINX_REPO_KEY`: Contenido del archivo `nginx-repo.key` (clave privada de repositorio)
+- `LICENSE_JWT`: Token JWT de licencia NGINX One Agent
+
 ### Dependencias
 - Terraform >= 1.5.0
 - AWS Provider >= 5.0
@@ -104,6 +109,65 @@ Ejecuta el workflow `eks-tfc-destroy`:
 1. Lee `.tfworkspace` para obtener el workspace creado anteriormente
 2. Ejecuta `terraform destroy`
 3. Elimina el workspace en Terraform Cloud
+
+### 3. Desplegar NGINX Plus con One Agent (Opcional)
+
+Para desplegar NGINX Plus Ingress Controller con NGINX One Agent en el cluster:
+
+**Prerequisitos:**
+1. Cluster EKS ya creado (`enable_nginx=false` en el apply anterior)
+2. Credenciales NGINX Plus configuradas en secretos de GitHub:
+   - `NGINX_REPO_CRT`: certificado de repositorio
+   - `NGINX_REPO_KEY`: clave privada de repositorio  
+   - `LICENSE_JWT`: token JWT de licencia NGINX One Agent
+
+**Pasos:**
+
+1. **Opción A: Editar workflow para habilitar NGINX**
+   
+   En `.github/workflows/eks-tfc.yml`, cambia en los jobs `plan` y `apply`:
+   ```bash
+   # De:
+   -var="enable_nginx=false"
+   
+   # A:
+   -var="enable_nginx=true"
+   ```
+
+2. **Opción B: Usar terraform.tfvars (local)**
+   
+   Crea `terraform.tfvars`:
+   ```hcl
+   aws_region       = "us-east-1"
+   cluster_name     = "eks-21959515353"
+   enable_nginx     = true
+   nginx_repo_crt   = file("~/.nginx/nginx-repo.crt")
+   nginx_repo_key   = file("~/.nginx/nginx-repo.key")
+   license_jwt      = file("~/.nginx/license.jwt")
+   ```
+
+3. **Ejecuta el workflow o Terraform**:
+   ```bash
+   terraform plan -var="enable_nginx=true"
+   terraform apply -auto-approve -var="enable_nginx=true"
+   ```
+
+**Verificar NGINX Plus:**
+
+```bash
+# Esperar a que el pod esté corriendo
+kubectl get pods -n nginx -w
+
+# Ver logs del controller
+kubectl logs -n nginx -l app.kubernetes.io/name=nginx-ingress -f
+
+# Obtener IP del load balancer
+kubectl get svc -n nginx
+```
+
+**Desactivar NGINX Plus:**
+
+Cambia `enable_nginx=false` en el workflow o terraform.tfvars y ejecuta apply nuevamente.
 
 ---
 
@@ -208,7 +272,7 @@ El cluster genera:
 - [ ] Integrar ECR para imágenes de aplicaciones
 - [ ] Ampliar a múltiples regiones
 - [ ] Agregar políticas de autoescalado para node groups
-- [ ] Completar módulo de NGINX con valores reales
+- [x] Completar módulo de NGINX con valores reales y One Agent
 
 ## Desarrollo Modular (Ramas)
 
