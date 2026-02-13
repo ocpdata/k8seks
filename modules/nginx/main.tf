@@ -192,14 +192,6 @@ resource "helm_release" "nginx" {
   dynamic "set" {
     for_each = var.data_plane_key != "" ? [1] : []
     content {
-      name  = "nginxAgent.instanceGroup"
-      value = "k8seks"
-    }
-  }
-
-  dynamic "set" {
-    for_each = var.data_plane_key != "" ? [1] : []
-    content {
       name  = "nginxAgent.endpointHost"
       value = "agent.connect.nginx.com"
     }
@@ -217,39 +209,6 @@ resource "helm_release" "nginx" {
     for_each = var.data_plane_key != "" ? [1] : []
     content {
       name  = "nginxAgent.tlsSkipVerify"
-      value = "false"
-    }
-  }
-
-  # Compatibility settings for releases that still read legacy Instance Manager fields.
-  dynamic "set" {
-    for_each = var.data_plane_key != "" ? [1] : []
-    content {
-      name  = "nginxAgent.instanceManager.host"
-      value = "agent.connect.nginx.com"
-    }
-  }
-
-  dynamic "set" {
-    for_each = var.data_plane_key != "" ? [1] : []
-    content {
-      name  = "nginxAgent.instanceManager.grpcPort"
-      value = "443"
-    }
-  }
-
-  dynamic "set" {
-    for_each = var.data_plane_key != "" ? [1] : []
-    content {
-      name  = "nginxAgent.instanceManager.tls.enable"
-      value = "true"
-    }
-  }
-
-  dynamic "set" {
-    for_each = var.data_plane_key != "" ? [1] : []
-    content {
-      name  = "nginxAgent.instanceManager.tls.skipVerify"
       value = "false"
     }
   }
