@@ -32,7 +32,7 @@ jobs:
       TFC_TOKEN: ${{ secrets.TFC_TOKEN }}
       TFC_ORG: ${{ secrets.TFC_ORG }}
       TF_TOKEN_app_terraform_io: ${{ secrets.TFC_TOKEN }}
-      TF_WORKSPACE: eks-k8seks
+      TF_WORKSPACE: k8seks
       AWS_REGION: ${{ inputs.region != '' && inputs.region || secrets.AWS_REGION }}
       WORKSPACE_SUFFIX: k8seks
       CLUSTER_NAME_OVERRIDE: ${{ inputs.cluster_name }}
@@ -78,7 +78,7 @@ jobs:
       TFC_TOKEN: ${{ secrets.TFC_TOKEN }}
       TFC_ORG: ${{ secrets.TFC_ORG }}
       TF_TOKEN_app_terraform_io: ${{ secrets.TFC_TOKEN }}
-      TF_WORKSPACE: eks-k8seks
+      TF_WORKSPACE: k8seks
       AWS_REGION: ${{ inputs.region != '' && inputs.region || secrets.AWS_REGION }}
       WORKSPACE_SUFFIX: k8seks
       CLUSTER_NAME_OVERRIDE: ${{ inputs.cluster_name }}
