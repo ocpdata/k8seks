@@ -9,6 +9,19 @@ const CATEGORY_MAP = {
   other: { label: "Drama", query: "drama" },
 };
 
+const CURRENT_IMDB_IDS = [
+  "tt1375666",
+  "tt0468569",
+  "tt4154796",
+  "tt9362722",
+  "tt23289160",
+  "tt15354916",
+  "tt16311594",
+  "tt1517268",
+  "tt9362722",
+  "tt0167260",
+];
+
 const POSTER_PLACEHOLDER =
   "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='240'><rect width='100%25' height='100%25' fill='%230f172a'/><text x='50%25' y='50%25' fill='%2394a3b8' font-size='14' font-family='sans-serif' dominant-baseline='middle' text-anchor='middle'>Sin poster</text></svg>";
 
@@ -112,6 +125,35 @@ async function fetchMovies(query, year, pages = 1) {
   }
 }
 
+async function fetchByIds(ids) {
+  if (!API_KEY) {
+    return { error: "OMDB_API_KEY no configurada.", movies: [] };
+  }
+
+  try {
+    const results = await Promise.all(
+      ids.map(async (id) => {
+        const url = new URL("https://www.omdbapi.com/");
+        url.searchParams.set("apikey", API_KEY);
+        url.searchParams.set("i", id);
+        const response = await fetch(url.toString());
+        const data = await response.json();
+        return data.Response === "True" ? data : null;
+      }),
+    );
+
+    const movies = results.filter(
+      (movie) => movie && movie.Poster && movie.Poster !== "N/A",
+    );
+    if (movies.length === 0) {
+      return { error: "No hay resultados con poster.", movies: [] };
+    }
+    return { error: "", movies };
+  } catch (err) {
+    return { error: "Error consultando OMDb.", movies: [] };
+  }
+}
+
 const server = http.createServer(async (req, res) => {
   const requestUrl = new URL(req.url, `http://${req.headers.host}`);
   const path = requestUrl.pathname;
@@ -145,7 +187,7 @@ const server = http.createServer(async (req, res) => {
   let movies = [];
 
   if (path === "/") {
-    ({ error, movies } = await fetchMovies(query, year, 2));
+    ({ error, movies } = await fetchByIds(CURRENT_IMDB_IDS));
   } else {
     ({ error, movies } = await fetchMovies(query, "", 1));
   }
