@@ -82,14 +82,6 @@ resource "helm_release" "nginx" {
   dynamic "set" {
     for_each = var.nginx_repo_crt != "" && var.nginx_repo_key != "" ? [1] : []
     content {
-      name  = "controller.serviceAccount.imagePullSecretName"
-      value = "nginx-repo"
-    }
-  }
-
-  dynamic "set" {
-    for_each = var.nginx_repo_crt != "" && var.nginx_repo_key != "" ? [1] : []
-    content {
       name  = "controller.serviceAccount.imagePullSecretsNames[0]"
       value = "nginx-repo"
     }
