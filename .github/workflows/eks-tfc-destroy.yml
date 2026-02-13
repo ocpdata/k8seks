@@ -9,6 +9,22 @@ on:
       region:
         description: "Optional AWS region override"
         required: false
+      enable_nginx:
+        description: "Destroy NGINX module resources (true/false)"
+        required: false
+        default: "true"
+        type: choice
+        options:
+          - "true"
+          - "false"
+      enable_cine:
+        description: "Destroy cine module resources (true/false)"
+        required: false
+        default: "true"
+        type: choice
+        options:
+          - "true"
+          - "false"
 
 jobs:
   prep:
@@ -69,7 +85,13 @@ jobs:
           terraform plan -destroy \
             -var="aws_region=${AWS_REGION}" \
             -var="cluster_name=${CLUSTER_NAME}" \
-            -var="enable_nginx=false"
+            -var="enable_nginx=${{ inputs.enable_nginx }}" \
+            -var="enable_cine=${{ inputs.enable_cine }}" \
+            -var="license_jwt=${LICENSE_JWT}" \
+            -var="data_plane_key=${DATA_PLANE_KEY}"
+        env:
+          LICENSE_JWT: ${{ secrets.LICENSE_JWT }}
+          DATA_PLANE_KEY: ${{ secrets.DATA_PLANE_KEY }}
 
   destroy:
     runs-on: ubuntu-latest
@@ -115,7 +137,13 @@ jobs:
           terraform destroy -auto-approve \
             -var="aws_region=${AWS_REGION}" \
             -var="cluster_name=${CLUSTER_NAME}" \
-            -var="enable_nginx=false"
+            -var="enable_nginx=${{ inputs.enable_nginx }}" \
+            -var="enable_cine=${{ inputs.enable_cine }}" \
+            -var="license_jwt=${LICENSE_JWT}" \
+            -var="data_plane_key=${DATA_PLANE_KEY}"
+        env:
+          LICENSE_JWT: ${{ secrets.LICENSE_JWT }}
+          DATA_PLANE_KEY: ${{ secrets.DATA_PLANE_KEY }}
 
       - name: Delete Terraform Cloud workspace
         shell: bash
