@@ -98,7 +98,7 @@ resource "kubernetes_secret" "nginx_agent" {
   type = "Opaque"
 
   data = {
-    "dataplane-key" = trimspace(var.data_plane_key)
+    "dataplane.key" = trimspace(var.data_plane_key)
   }
 
   depends_on = [kubernetes_namespace.nginx]
