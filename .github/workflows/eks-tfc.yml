@@ -268,8 +268,8 @@ jobs:
 
   apply-cine:
     runs-on: ubuntu-latest
-    needs: [prep, plan, apply-eks]
-    if: ${{ always() && inputs.enable_cine == 'true' && (inputs.terraform_target == 'module.cine' || needs.apply-eks.result == 'success') && inputs.terraform_target != 'module.eks' && inputs.terraform_target != 'module.nginx' }}
+    needs: [prep, plan, apply-eks, apply-nginx]
+    if: ${{ always() && inputs.enable_cine == 'true' && (inputs.terraform_target == 'module.cine' || (needs.apply-eks.result == 'success' && needs.apply-nginx.result == 'success')) && inputs.terraform_target != 'module.eks' && inputs.terraform_target != 'module.nginx' }}
     env:
       TFC_TOKEN: ${{ secrets.TFC_TOKEN }}
       TFC_ORG: ${{ secrets.TFC_ORG }}
