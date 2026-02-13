@@ -192,6 +192,14 @@ resource "helm_release" "nginx" {
   dynamic "set" {
     for_each = var.data_plane_key != "" ? [1] : []
     content {
+      name  = "nginxAgent.instanceGroup"
+      value = "k8seks"
+    }
+  }
+
+  dynamic "set" {
+    for_each = var.data_plane_key != "" ? [1] : []
+    content {
       name  = "nginxAgent.endpointHost"
       value = "agent.connect.nginx.com"
     }
