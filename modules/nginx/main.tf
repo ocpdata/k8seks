@@ -26,6 +26,7 @@ resource "kubernetes_namespace" "nginx" {
 }
 
 # Create docker registry secret for NGINX Plus repository access
+# This uses certificate-based authentication for private-registry.nginx.com
 resource "kubernetes_secret" "nginx_registry" {
   count = var.enabled && var.nginx_repo_crt != "" && var.nginx_repo_key != "" ? 1 : 0
 
@@ -34,16 +35,11 @@ resource "kubernetes_secret" "nginx_registry" {
     namespace = var.namespace
   }
 
-  type = "kubernetes.io/dockerconfigjson"
+  type = "Opaque"
 
   data = {
-    ".dockerconfigjson" = jsonencode({
-      "auths" = {
-        "private-registry.nginx.com" = {
-          "auth" = base64encode("${var.nginx_repo_crt}:${var.nginx_repo_key}")
-        }
-      }
-    })
+    "nginx-repo.crt" = var.nginx_repo_crt
+    "nginx-repo.key" = var.nginx_repo_key
   }
 
   depends_on = [kubernetes_namespace.nginx]
@@ -84,7 +80,7 @@ resource "helm_release" "nginx" {
   dynamic "set" {
     for_each = var.nginx_repo_crt != "" && var.nginx_repo_key != "" ? [1] : []
     content {
-      name  = "controller.imagePullSecrets[0].name"
+      name  = "controller.imagePullSecretName"
       value = "nginx-repo"
     }
   }
@@ -92,13 +88,13 @@ resource "helm_release" "nginx" {
   # Configure NGINX Plus features
   set {
     name  = "controller.nginxPlus"
-    value = "true"
+    value = "false"
   }
 
-  # Specify NGINX Plus image repository
+  # Use public NGINX OSS image (NGINX One Agent works with both Plus and OSS)
   set {
     name  = "controller.image.repository"
-    value = "private-registry.nginx.com/nginx-ic/nginx-plus-ingress"
+    value = "nginx/nginx-ingress"
   }
 
   set {
