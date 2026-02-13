@@ -1,0 +1,9 @@
+{
+  "policy": {
+    "name": "cine-monitor",
+    "template": {
+      "name": "POLICY_TEMPLATE_NGINX_BASE"
+    },
+    "enforcementMode": "transparent"
+  }
+}

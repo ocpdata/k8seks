@@ -1,0 +1,28 @@
+apiVersion: k8s.nginx.org/v1
+kind: Policy
+metadata:
+  name: cine-waf-monitor
+  namespace: cine
+spec:
+  waf:
+    enable: true
+    apBundle: "cine-monitor.tgz"
+---
+apiVersion: k8s.nginx.org/v1
+kind: VirtualServer
+metadata:
+  name: cine-waf-monitor
+  namespace: cine
+spec:
+  host: cine-waf.example.com
+  ingressClassName: nginx
+  policies:
+    - name: cine-waf-monitor
+  upstreams:
+    - name: cine
+      service: cine
+      port: 80
+  routes:
+    - path: /
+      action:
+        pass: cine
