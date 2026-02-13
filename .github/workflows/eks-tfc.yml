@@ -25,6 +25,14 @@ on:
         options:
           - "false"
           - "true"
+      nginx_waf_image_repository:
+        description: "Optional custom WAF image repository"
+        required: false
+        default: "private-registry.nginx.com/nginx-ic-nap-v5/nginx-plus-ingress"
+      nginx_waf_image_tag:
+        description: "WAF image tag"
+        required: false
+        default: "5.2.1"
       enable_waf_monitor_policy:
         description: "Deploy WAF monitor policy for cine (true/false)"
         required: false
@@ -147,6 +155,8 @@ jobs:
 
           ENABLE_NGINX="${{ inputs.enable_nginx }}"
           ENABLE_WAF="${{ inputs.enable_waf }}"
+          WAF_IMAGE_REPOSITORY="${{ inputs.nginx_waf_image_repository }}"
+          WAF_IMAGE_TAG="${{ inputs.nginx_waf_image_tag }}"
           ENABLE_CINE="${{ inputs.enable_cine }}"
           TERRAFORM_TARGET="${{ inputs.terraform_target }}"
 
@@ -162,6 +172,8 @@ jobs:
             -var="cluster_name=${CLUSTER_NAME}" \
             -var="enable_nginx=${ENABLE_NGINX}" \
             -var="enable_nginx_waf=${ENABLE_WAF}" \
+            -var="nginx_waf_image_repository=${WAF_IMAGE_REPOSITORY}" \
+            -var="nginx_waf_image_tag=${WAF_IMAGE_TAG}" \
             -var="enable_cine=${ENABLE_CINE}" \
             -var="nginx_repo_crt=${NGINX_REPO_CRT:-}" \
             -var="nginx_repo_key=${NGINX_REPO_KEY:-}" \
@@ -295,6 +307,8 @@ jobs:
             -var="cluster_name=${CLUSTER_NAME}" \
             -var="enable_nginx=true" \
             -var="enable_nginx_waf=${{ inputs.enable_waf }}" \
+            -var="nginx_waf_image_repository=${{ inputs.nginx_waf_image_repository }}" \
+            -var="nginx_waf_image_tag=${{ inputs.nginx_waf_image_tag }}" \
             -var="nginx_repo_crt=${NGINX_REPO_CRT:-}" \
             -var="nginx_repo_key=${NGINX_REPO_KEY:-}" \
             -var="license_jwt=${LICENSE_JWT:-}" \
