@@ -80,6 +80,41 @@ jobs:
         with:
           terraform_wrapper: false
 
+      - name: Create Terraform Cloud workspace if not exists
+        shell: bash
+        run: |
+          set -euo pipefail
+          WORKSPACE_NAME="eks-k8seks"
+          
+          API="https://app.terraform.io/api/v2/organizations/${TFC_ORG}/workspaces/${WORKSPACE_NAME}"
+          STATUS=$(curl -s -o /tmp/ws.json -w "%{http_code}" \
+            -H "Authorization: Bearer ${TFC_TOKEN}" \
+            -H "Content-Type: application/vnd.api+json" \
+            "${API}")
+
+          if [ "${STATUS}" = "200" ]; then
+            echo "✓ Workspace ${WORKSPACE_NAME} already exists"
+          elif [ "${STATUS}" = "404" ]; then
+            echo "Creating workspace ${WORKSPACE_NAME}..."
+            CREATE_STATUS=$(curl -s -o /tmp/ws_create.json -w "%{http_code}" \
+              -X POST \
+              -H "Authorization: Bearer ${TFC_TOKEN}" \
+              -H "Content-Type: application/vnd.api+json" \
+              -d "{\"data\":{\"type\":\"workspaces\",\"attributes\":{\"name\":\"${WORKSPACE_NAME}\",\"execution-mode\":\"local\",\"auto-apply\":false}}}" \
+              "https://app.terraform.io/api/v2/organizations/${TFC_ORG}/workspaces")
+            if [ "${CREATE_STATUS}" = "201" ] || [ "${CREATE_STATUS}" = "200" ]; then
+              echo "✓ Workspace ${WORKSPACE_NAME} created successfully"
+            else
+              echo "✗ Failed to create workspace (status ${CREATE_STATUS})"
+              cat /tmp/ws_create.json
+              exit 1
+            fi
+          else
+            echo "✗ Failed to query workspace (status ${STATUS})"
+            cat /tmp/ws.json
+            exit 1
+          fi
+
       - name: Terraform init
         run: |
           terraform init \
