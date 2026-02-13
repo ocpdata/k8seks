@@ -34,7 +34,7 @@ resource "kubernetes_secret" "nplus_license" {
     namespace = var.namespace
   }
 
-  type = "Opaque"
+  type = "nginx.com/license"
 
   data = {
     "license.jwt" = var.license_jwt
