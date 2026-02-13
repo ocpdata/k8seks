@@ -96,6 +96,15 @@ resource "helm_release" "nginx" {
     }
   }
 
+  # Fallback for charts that use controller.imagePullSecrets
+  dynamic "set" {
+    for_each = var.nginx_repo_crt != "" && var.nginx_repo_key != "" ? [1] : []
+    content {
+      name  = "controller.imagePullSecrets[0].name"
+      value = "nginx-repo"
+    }
+  }
+
   # Configure NGINX Plus
   set {
     name  = "controller.nginxPlus"
