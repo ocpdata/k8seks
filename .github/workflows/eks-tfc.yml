@@ -85,7 +85,7 @@ jobs:
         run: |
           set -euo pipefail
           WORKSPACE_NAME="eks-k8seks"
-          
+
           API="https://app.terraform.io/api/v2/organizations/${TFC_ORG}/workspaces/${WORKSPACE_NAME}"
           STATUS=$(curl -s -o /tmp/ws.json -w "%{http_code}" \
             -H "Authorization: Bearer ${TFC_TOKEN}" \
@@ -236,6 +236,26 @@ jobs:
         uses: hashicorp/setup-terraform@v3
         with:
           terraform_wrapper: false
+
+      - name: Configure kubeconfig
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -n "${CLUSTER_NAME_OVERRIDE}" ]; then
+            CLUSTER_NAME="${CLUSTER_NAME_OVERRIDE}"
+          else
+            CLUSTER_NAME="eks-${WORKSPACE_SUFFIX}"
+          fi
+
+          aws eks update-kubeconfig \
+            --region "${AWS_REGION}" \
+            --name "${CLUSTER_NAME}"
+
+      - name: Apply NGINX CRDs
+        shell: bash
+        run: |
+          set -euo pipefail
+          helm show crds oci://ghcr.io/nginx/charts/nginx-ingress --version 2.4.3 | kubectl apply -f -
 
       - name: Terraform init
         run: |
