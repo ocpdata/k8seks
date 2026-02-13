@@ -144,7 +144,15 @@ jobs:
           REPO="${{ steps.meta.outputs.waf_image_repository }}"
           TAG="${{ steps.meta.outputs.waf_image_tag }}"
           make debian-image-nap-plus PREFIX="${REPO}" TARGET=download
-          make push PREFIX="${REPO}" TAG="${TAG}"
+          BUILT_TAG="$(docker images "${REPO}" --format '{{.Tag}}' | head -n1)"
+          if [ -z "${BUILT_TAG}" ]; then
+            echo "No se encontró imagen local construida para ${REPO}"
+            exit 1
+          fi
+          if [ "${BUILT_TAG}" != "${TAG}" ]; then
+            docker tag "${REPO}:${BUILT_TAG}" "${REPO}:${TAG}"
+          fi
+          docker push "${REPO}:${TAG}"
 
   plan:
     runs-on: ubuntu-latest
