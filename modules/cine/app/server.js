@@ -76,26 +76,37 @@ function pageTemplate(title, subtitle, movies, error) {
 </html>`;
 }
 
-async function fetchMovies(query, year) {
+async function fetchMovies(query, year, pages = 1) {
   if (!API_KEY) {
     return { error: "OMDB_API_KEY no configurada.", movies: [] };
   }
 
-  const url = new URL("https://www.omdbapi.com/");
-  url.searchParams.set("apikey", API_KEY);
-  url.searchParams.set("s", query);
-  url.searchParams.set("type", "movie");
-  if (year) {
-    url.searchParams.set("y", year);
-  }
-
   try {
-    const response = await fetch(url.toString());
-    const data = await response.json();
-    if (data.Response !== "True") {
-      return { error: data.Error || "No hay resultados.", movies: [] };
+    const results = [];
+    for (let page = 1; page <= pages; page += 1) {
+      const url = new URL("https://www.omdbapi.com/");
+      url.searchParams.set("apikey", API_KEY);
+      url.searchParams.set("s", query);
+      url.searchParams.set("type", "movie");
+      url.searchParams.set("page", String(page));
+      if (year) {
+        url.searchParams.set("y", year);
+      }
+
+      const response = await fetch(url.toString());
+      const data = await response.json();
+      if (data.Response === "True" && Array.isArray(data.Search)) {
+        results.push(...data.Search);
+      }
     }
-    return { error: "", movies: data.Search || [] };
+
+    const withPosters = results.filter(
+      (movie) => movie.Poster && movie.Poster !== "N/A",
+    );
+    if (withPosters.length === 0) {
+      return { error: "No hay resultados con poster.", movies: [] };
+    }
+    return { error: "", movies: withPosters };
   } catch (err) {
     return { error: "Error consultando OMDb.", movies: [] };
   }
@@ -130,7 +141,14 @@ const server = http.createServer(async (req, res) => {
     }
   }
 
-  const { error, movies } = await fetchMovies(query, path === "/" ? year : "");
+  let error = "";
+  let movies = [];
+
+  if (path === "/") {
+    ({ error, movies } = await fetchMovies(query, year, 2));
+  } else {
+    ({ error, movies } = await fetchMovies(query, "", 1));
+  }
   const html = pageTemplate(title, subtitle, movies, error);
 
   res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
