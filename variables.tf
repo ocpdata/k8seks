@@ -85,7 +85,7 @@ variable "nginx_namespace" {
 variable "nginx_chart_version" {
   description = "NGINX Ingress Controller Helm chart version."
   type        = string
-  default     = "1.0.0"
+  default     = "1.3.2"
 }
 
 variable "nginx_helm_values" {
