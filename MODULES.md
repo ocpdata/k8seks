@@ -7,9 +7,11 @@ Esta guía explica cómo usar la estructura modular del proyecto para desarrolla
 El proyecto está dividido en 2 módulos independientes:
 
 ### 1. `modules/eks/` - EKS Cluster Base
+
 **Responsabilidad**: Crear cluster EKS + VPC + subnets + node groups
 
 **Archivos**:
+
 - `main.tf`: Módulos terraform-aws-modules (VPC, EKS)
 - `variables.tf`: Variables de entrada (aws_region, cluster_name, kubernetes_version, etc.)
 - `outputs.tf`: Outputs (cluster_endpoint, security_group_id, etc.)
@@ -17,14 +19,21 @@ El proyecto está dividido en 2 módulos independientes:
 **Estado**: Siempre activado (no tiene flag `enable_*`)
 
 ### 2. `modules/nginx/` - NGINX Plus Ingress Controller
-**Responsabilidad**: Desplegar NGINX Plus en el cluster usando Helm
+
+**Responsabilidad**: Desplegar NGINX Plus en el cluster usando Helm (chart OCI) y habilitar NGINX One Agent
 
 **Archivos**:
+
 - `main.tf`: Helm release + namespace + autenticación con cluster
-- `variables.tf`: Variables (enabled, chart_version, helm_values, etc.)
+- `variables.tf`: Variables (enabled, chart_version, helm_values, data_plane_key, etc.)
 - `outputs.tf`: Outputs (release_name, release_status, etc.)
 
-**Activación**: `enable_nginx = true` en terraform.tfvars
+**Activación**: `enable_nginx = true` en terraform.tfvars o workflow
+
+**Secretos requeridos**:
+
+- `LICENSE_JWT`
+- `DATA_PLANE_KEY`
 
 **Dependencias**: Requiere outputs de `modules/eks` (cluster endpoint, token, cert)
 
@@ -52,11 +61,13 @@ module "nginx" {
 ## Estrategia de Ramas (Git)
 
 ### Rama `main`
+
 - Contiene código stable de todos los módulos
 - Workflows GitHub Actions (`eks-tfc.yml`, `eks-tfc-destroy.yml`) trabajan sobre `main`
 - Puede desplegar cualquier combinación de módulos via variables
 
 ### Rama `feature/nginx-plus` (Ejemplo)
+
 ```bash
 git checkout -b feature/nginx-plus
 # Edita modules/nginx/
@@ -106,6 +117,7 @@ git push origin feature/nginx-plus
 ## Configuración de Variables
 
 ### Opción 1: Usar `terraform.tfvars` localmente
+
 ```bash
 cp terraform.tfvars.example terraform.tfvars
 # Editar terraform.tfvars con valores reales
@@ -113,12 +125,14 @@ terraform plan
 ```
 
 ### Opción 2: Usar `-var` flags
+
 ```bash
 terraform plan -var=enable_nginx=true -var=enable_people=true
 ```
 
-### Opción 3: En GitHub Actions (workflows)
-Los workflows `eks-tfc.yml` e `eks-tfc-destroy.yml` pueden pasarvariables:
+### Opcion 3: En GitHub Actions (workflows)
+
+Los workflows `eks-tfc.yml` e `eks-tfc-destroy.yml` pueden pasar variables:
 
 ```yaml
 - name: Terraform apply
@@ -127,6 +141,7 @@ Los workflows `eks-tfc.yml` e `eks-tfc-destroy.yml` pueden pasarvariables:
       -var="aws_region=${AWS_REGION}" \
       -var="cluster_name=${CLUSTER_NAME}" \
       -var="enable_nginx=true"  # Agregar si necesitas
+      -var="data_plane_key=${DATA_PLANE_KEY}"
 ```
 
 ---
@@ -134,6 +149,7 @@ Los workflows `eks-tfc.yml` e `eks-tfc-destroy.yml` pueden pasarvariables:
 ## Ejemplo de PRs y Merges
 
 ### PR 1: Merge feature/nginx-plus → main
+
 ```
 Commit History:
 ├─ main branch
@@ -143,6 +159,7 @@ Commit History:
 ```
 
 Después del merge, `main` puede:
+
 ```bash
 # Solo EKS
 terraform apply -var=enable_nginx=false
@@ -156,19 +173,23 @@ terraform apply -var=enable_nginx=true
 ## Troubleshooting
 
 ### Error: "module not found"
+
 ```
 Error: Module not found
   on main.tf line 15, in module "nginx":
     source = "./modules/nginx"
 ```
+
 **Solución**: Asegúrate de que `modules/nginx/` existe con sus archivos tf.
 
 ### Error: "Outputs not available"
+
 ```
 Error: Missing required argument
   on main.tf line 25, in module "nginx":
     cluster_endpoint = module.eks.cluster_endpoint
 ```
+
 **Solución**: Asegúrate de que `module.eks` está desplegado y outputs están disponibles.
 
 ---
@@ -190,5 +211,3 @@ Error: Missing required argument
 2. Testear en rama antes de merge a main
 3. Mergear a main cuando esté stable
 4. Ejecutar workflows GitHub Actions para desplegar
-
-

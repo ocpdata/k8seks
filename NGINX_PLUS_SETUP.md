@@ -4,49 +4,15 @@ Esta guía describe cómo configurar NGINX Plus Ingress Controller con NGINX One
 
 ## Requisitos Previos
 
-1. **Suscripción a NGINX Plus**: Acceso a repositorio privado de NGINX
-2. **Licencia NGINX One Agent**: Token JWT para telemetría
-3. **Cluster EKS ya creado**: Usar el workflow `eks-tfc` primero con `enable_nginx=false`
+1. **Suscripcion a NGINX Plus**: JWT de licencia
+2. **NGINX One Agent**: Data plane key
+3. **Cluster EKS ya creado**: Usar el workflow `eks-tfc` primero si aun no existe
 
 ## Paso 1: Obtener Credenciales NGINX Plus
 
-### 1.1 Certificado y Clave del Repositorio
+### 1.1 License JWT y Data Plane Key
 
-Desde tu descarga de NGINX Plus en el portal:
-
-```bash
-# Busca estos archivos en tu descarga
-nginx-repo.crt    # Certificado de cliente
-nginx-repo.key    # Clave privada de cliente
-license.jwt       # Licencia (si está incluida)
-```
-
-Si no tienes estos archivos, contacta a tu proveedor de NGINX Plus.
-
-### 1.2 Verificar Formato
-
-Los archivos deben verse algo así:
-
-**nginx-repo.crt**:
-```
------BEGIN CERTIFICATE-----
-MIIF...
-...
------END CERTIFICATE-----
-```
-
-**nginx-repo.key**:
-```
------BEGIN RSA PRIVATE KEY-----
-MIIJJwIBA...
-...
------END RSA PRIVATE KEY-----
-```
-
-**license.jwt** (token JWT):
-```
-eyJhbGciOiJ...
-```
+Desde MyF5 descarga el archivo `license.jwt` y copia el `DATA_PLANE_KEY` desde NGINX One.
 
 ## Paso 2: Configurar Secretos en GitHub
 
@@ -54,35 +20,7 @@ eyJhbGciOiJ...
 2. Settings → Secrets and variables → Actions
 3. Haz clic en "New repository secret"
 
-**IMPORTANTE**: NGINX One Agent requiere **ambos secretos** (`LICENSE_JWT` y `DATA_PLANE_KEY`) para funcionar correctamente.
-
-### Crear Secret: NGINX_REPO_CRT
-
-- **Name**: `NGINX_REPO_CRT`
-- **Secret**: Copia el contenido completo del archivo `nginx-repo.crt` (incluyendo las líneas BEGIN/END)
-
-Ejemplo:
-```
------BEGIN CERTIFICATE-----
-MIIF...
------END CERTIFICATE-----
-```
-
-Haz clic en "Add secret"
-
-### Crear Secret: NGINX_REPO_KEY
-
-- **Name**: `NGINX_REPO_KEY`
-- **Secret**: Copia el contenido completo del archivo `nginx-repo.key` (incluyendo las líneas BEGIN/END)
-
-Ejemplo:
-```
------BEGIN RSA PRIVATE KEY-----
-MIIJJwIBA...
------END RSA PRIVATE KEY-----
-```
-
-Haz clic en "Add secret"
+**IMPORTANTE**: NGINX One Agent requiere **ambos secretos** (`LICENSE_JWT` y `DATA_PLANE_KEY`).
 
 ### Crear Secret: LICENSE_JWT
 
@@ -90,6 +28,7 @@ Haz clic en "Add secret"
 - **Secret**: Copia el token JWT completo de tu licencia NGINX One Agent
 
 Ejemplo:
+
 ```
 eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 ```
@@ -102,6 +41,7 @@ Haz clic en "Add secret"
 - **Secret**: Copia el API key del data plane de NGINX One Agent
 
 Ejemplo:
+
 ```
 a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6
 ```
@@ -110,34 +50,12 @@ Haz clic en "Add secret"
 
 ## Paso 3: Habilitar NGINX Plus en el Workflow
 
-### Opción A: Modificar el Workflow (Recomendado para Producción)
+### Opcion A: Usar inputs del workflow (Recomendado)
 
-Edita `.github/workflows/eks-tfc.yml`:
+En GitHub Actions:
 
-**En el job `plan`** (línea ~124):
-```yaml
-# Cambiar de:
--var="enable_nginx=false"
-
-# A:
--var="enable_nginx=true"
-```
-
-**En el job `apply`** (línea ~179):
-```yaml
-# Cambiar de:
--var="enable_nginx=false"
-
-# A:
--var="enable_nginx=true"
-```
-
-Luego:
-```bash
-git add .github/workflows/eks-tfc.yml
-git commit -m "feat: Enable NGINX Plus deployment"
-git push
-```
+- `enable_nginx=true`
+- `terraform_target=module.nginx`
 
 ### Opción B: Usar terraform.tfvars Local (Para Desarrollo)
 
@@ -151,13 +69,13 @@ cluster_name  = "eks-21959515353"
 enable_nginx  = true
 
 # Cargar desde archivos locales
-nginx_repo_crt = file("/ruta/a/nginx-repo.crt")
-nginx_repo_key = file("/ruta/a/nginx-repo.key")
 license_jwt    = file("/ruta/a/license.jwt")
+data_plane_key = file("/ruta/a/dataplane.key")
 EOF
 ```
 
 Luego ejecuta:
+
 ```bash
 terraform plan -var="enable_nginx=true"
 terraform apply -auto-approve -var="enable_nginx=true"
@@ -171,10 +89,11 @@ terraform apply -auto-approve -var="enable_nginx=true"
 4. Haz clic en "Run workflow" nuevamente
 
 El workflow:
-- Verificará que los secretos están disponibles
-- Creará Kubernetes secrets internos para las credenciales
-- Desplegará NGINX Plus Ingress Controller
-- Habilitará NGINX One Agent para monitoreo
+
+- Verifica que los secretos estan disponibles
+- Aplica CRDs del chart OCI
+- Crea secrets `nplus-license`, `regcred` y `nginx-agent`
+- Despliega NGINX Plus + NGINX One Agent
 
 ## Paso 5: Verificar la Instalación
 
@@ -188,14 +107,15 @@ kubectl get namespace nginx
 # Verificar Kubernetes secrets creados
 kubectl get secrets -n nginx
 # Deberías ver:
-# - nginx-repo (credenciales del repositorio)
-# - nginx-license (licencia NGINX One Agent)
+# - regcred (credenciales del registry)
+# - nplus-license (licencia NGINX Plus)
+# - nginx-agent (dataplane key)
 
 # Ver los pods de NGINX Plus
 kubectl get pods -n nginx -w
 
-# Verificar logs
-kubectl logs -n nginx -l app.kubernetes.io/name=nginx-ingress -f
+# Verificar logs (agente integrado)
+kubectl logs -n nginx -l app.kubernetes.io/name=nginx-ingress -f | grep -i agent
 
 # Obtener endpoint del Load Balancer
 kubectl get svc -n nginx
@@ -206,31 +126,52 @@ kubectl get svc -n nginx
 
 El workflow crea automáticamente:
 
-### Kubernetes Secret: nginx-repo
-Contiene credenciales Docker para el repositorio privado:
+### Kubernetes Secret: regcred
+
+Contiene credenciales Docker para el registry privado:
+
 ```yaml
 apiVersion: v1
 kind: Secret
 metadata:
-  name: nginx-repo
+  name: regcred
   namespace: nginx
-type: kubernetes.io/dockercfg
+type: kubernetes.io/dockerconfigjson
 data:
-  .dockercfg: <base64-encoded-registry-auth>
+  .dockerconfigjson: <base64-encoded-registry-auth>
 ```
 
-### Kubernetes Secret: nginx-license
-Contiene el JWT de licencia NGINX One Agent:
+### Kubernetes Secret: nplus-license
+
+Contiene el JWT de licencia NGINX Plus:
+
 ```yaml
 apiVersion: v1
 kind: Secret
 metadata:
-  name: nginx-license
+  name: nplus-license
   namespace: nginx
-type: Opaque
+type: nginx.com/license
 data:
   license.jwt: <base64-encoded-jwt>
 ```
+
+### Kubernetes Secret: nginx-agent
+
+Contiene el dataplane key para NGINX One:
+
+```yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: nginx-agent
+  namespace: nginx
+type: Opaque
+data:
+  dataplane.key: <base64-encoded-key>
+```
+
+````
 
 ## Solución de Problemas
 
@@ -239,8 +180,8 @@ data:
 **Causa**: Las credenciales del repositorio son inválidas o expiradas.
 
 **Solución**:
-1. Verifica que `NGINX_REPO_CRT` y `NGINX_REPO_KEY` sean exactos
-2. Confirma que la suscripción de NGINX Plus sigue activa
+1. Verifica que `LICENSE_JWT` sea correcto
+2. Confirma que la suscripcion de NGINX Plus sigue activa
 3. Actualiza los secretos en GitHub con nuevas credenciales
 
 ### Error: "ImagePullBackOff" en el pod de NGINX Plus
@@ -252,34 +193,32 @@ data:
 # Verificar estado del pod
 kubectl describe pod <pod-name> -n nginx
 
-# Verificar que el secret nginx-repo existe
-kubectl get secret nginx-repo -n nginx -o yaml
+# Verificar que el secret regcred existe
+kubectl get secret regcred -n nginx -o yaml
 
 # Reiniciar el pod
-kubectl rollout restart deployment/nginx-plus -n nginx
-```
+kubectl rollout restart ds/nginx-plus-nginx-ingress-controller -n nginx
+````
 
 ### NGINX One Agent no se conecta
 
-**Causa**: Token JWT no válido o expirado.
+**Causa**: `DATA_PLANE_KEY` incorrecta o secret desactualizado.
 
-**Solución**:
-1. Verifica que `LICENSE_JWT` sea el token correcto
-2. Confirma que el token no ha expirado
-3. Actualiza el secret `nginx-license`:
-   ```bash
-   kubectl delete secret nginx-license -n nginx
-   # Vuelve a ejecutar el workflow o:
-   kubectl create secret generic nginx-license \
-     --from-literal=license.jwt=$(cat license.jwt) \
-     -n nginx
-   ```
+**Solucion**:
+
+1. Verifica `DATA_PLANE_KEY`
+2. Borra el secret y re-ejecuta el workflow:
+
+```bash
+kubectl delete secret nginx-agent -n nginx
+```
 
 ### Pods en estado "Pending"
 
 **Causa**: No hay suficientes recursos en el cluster.
 
 **Solución**:
+
 ```bash
 # Verificar nodos disponibles
 kubectl get nodes
@@ -318,5 +257,6 @@ terraform apply -auto-approve -var="enable_nginx=false"
 ## Soporte
 
 Para problemas específicos de NGINX Plus, consulta:
+
 - [NGINX Support Portal](https://support.nginx.com/)
 - Logs del workflow en GitHub Actions

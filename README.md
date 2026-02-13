@@ -5,12 +5,14 @@ Este proyecto automatiza la creación y destrucción de clusters EKS en AWS usan
 ## Descripción
 
 El proyecto proporciona dos workflows principales:
+
 - **eks-tfc.yml**: Crea un cluster EKS con VPC, subnets, NAT Gateway y nodos gestionados.
 - **eks-tfc-destroy.yml**: Destruye la infraestructura EKS y elimina el workspace en Terraform Cloud.
 
 ## Requisitos Previos
 
 ### Secretos en GitHub
+
 Configura los siguientes secretos en tu repositorio:
 
 - `TFC_TOKEN`: API token de Terraform Cloud (con permisos para crear/gestionar workspaces)
@@ -20,12 +22,12 @@ Configura los siguientes secretos en tu repositorio:
 - `AWS_SECRET_ACCESS_KEY`: Credenciales AWS
 
 **Para NGINX Plus con NGINX One Agent**:
-- `NGINX_REPO_CRT`: Contenido del archivo `nginx-repo.crt` (certificado de repositorio)
-- `NGINX_REPO_KEY`: Contenido del archivo `nginx-repo.key` (clave privada de repositorio)
-- `LICENSE_JWT`: Token JWT de licencia NGINX One Agent
-- `DATA_PLANE_KEY`: API key del data plane para conectarse a NGINX One Agent
+
+- `LICENSE_JWT`: Token JWT de licencia NGINX Plus (se usa para registry y licencia)
+- `DATA_PLANE_KEY`: API key del data plane para conectarse a NGINX One
 
 ### Dependencias
+
 - Terraform >= 1.5.0
 - AWS Provider >= 5.0
 - Cuenta en Terraform Cloud
@@ -58,11 +60,13 @@ Configura los siguientes secretos en tu repositorio:
 ## Infraestructura Creada
 
 ### VPC
+
 - CIDR: `10.0.0.0/16` (configurable)
 - 3 subnets privadas y 3 públicas en diferentes AZs
 - NAT Gateway único para salida desde subnets privadas
 
 ### EKS
+
 - Cluster Kubernetes gestionado
 - Node group con instancias `t3.medium` (1-3 nodos, 2 deseados)
 - IRSA habilitado para pods con credenciales IAM
@@ -88,11 +92,13 @@ Ejecuta el workflow `eks-tfc`:
 ```
 
 **Inputs opcionales** (dejándolos vacíos usa defaults):
+
 - `workspace_suffix`: Sufijo para el workspace (default: `github.run_id`)
 - `cluster_name`: Nombre del cluster EKS (default: `eks-<workspace_suffix>`)
 - `region`: Región AWS (default: `secrets.AWS_REGION`)
 
 **Resultado**:
+
 - Crea workspace `eks-<suffix>` en Terraform Cloud
 - Crea VPC y EKS
 - Genera `.tfworkspace` con el suffix (versionado en Git)
@@ -107,60 +113,50 @@ Ejecuta el workflow `eks-tfc-destroy`:
 ```
 
 **Proceso**:
+
 1. Lee `.tfworkspace` para obtener el workspace creado anteriormente
 2. Ejecuta `terraform destroy`
 3. Elimina el workspace en Terraform Cloud
 
-### 3. Desplegar NGINX Plus con One Agent (Opcional)
+### 3. Desplegar NGINX Plus con NGINX One Agent (Opcional)
 
 Para desplegar NGINX Plus Ingress Controller con NGINX One Agent en el cluster:
 
 **Prerequisitos:**
-1. Cluster EKS ya creado (`enable_nginx=false` en el apply anterior)
-2. Credenciales NGINX Plus configuradas en secretos de GitHub:
-   - `NGINX_REPO_CRT`: certificado de repositorio
-   - `NGINX_REPO_KEY`: clave privada de repositorio  
-   - `LICENSE_JWT`: token JWT de licencia NGINX One Agent
+
+1. Cluster EKS ya creado
+2. Secretos en GitHub:
+   - `LICENSE_JWT`
+   - `DATA_PLANE_KEY`
 
 **Pasos:**
 
-1. **Opción A: Editar workflow para habilitar NGINX**
-   
-   En `.github/workflows/eks-tfc.yml`, cambia en los jobs `plan` y `apply`:
-   ```bash
-   # De:
-   -var="enable_nginx=false"
-   
-   # A:
-   -var="enable_nginx=true"
-   ```
+1. **Workflow recomendado**
 
-2. **Opción B: Usar terraform.tfvars (local)**
-   
-   Crea `terraform.tfvars`:
+   Ejecuta `eks-tfc` con:
+   - `enable_nginx=true`
+   - `terraform_target=module.nginx`
+
+   El workflow aplica CRDs del chart OCI y despliega NGINX Plus + NGINX One Agent.
+
+2. **Opcion local (terraform.tfvars)**
+
    ```hcl
-   aws_region       = "us-east-1"
-   cluster_name     = "eks-21959515353"
-   enable_nginx     = true
-   nginx_repo_crt   = file("~/.nginx/nginx-repo.crt")
-   nginx_repo_key   = file("~/.nginx/nginx-repo.key")
-   license_jwt      = file("~/.nginx/license.jwt")
+   aws_region     = "us-east-1"
+   cluster_name   = "eks-21959515353"
+   enable_nginx   = true
+   license_jwt    = file("~/.nginx/license.jwt")
+   data_plane_key = file("~/.nginx/dataplane.key")
    ```
 
-3. **Ejecuta el workflow o Terraform**:
-   ```bash
-   terraform plan -var="enable_nginx=true"
-   terraform apply -auto-approve -var="enable_nginx=true"
-   ```
-
-**Verificar NGINX Plus:**
+**Verificar NGINX Plus y NGINX One Agent:**
 
 ```bash
 # Esperar a que el pod esté corriendo
 kubectl get pods -n nginx -w
 
-# Ver logs del controller
-kubectl logs -n nginx -l app.kubernetes.io/name=nginx-ingress -f
+# Ver logs del controller/agent (agente integrado en el pod)
+kubectl logs -n nginx -l app.kubernetes.io/name=nginx-ingress -f | grep -i agent
 
 # Obtener IP del load balancer
 kubectl get svc -n nginx
@@ -216,12 +212,12 @@ prep
 
 ## Variables Terraform
 
-| Variable | Default | Descripción |
-|----------|---------|-------------|
-| `aws_region` | (requerido) | Región AWS para la infra |
-| `cluster_name` | `eks-<suffix>` | Nombre del cluster EKS |
-| `vpc_cidr` | `10.0.0.0/16` | CIDR del VPC |
-| `kubernetes_version` | `1.27` | Versión de Kubernetes |
+| Variable             | Default        | Descripción              |
+| -------------------- | -------------- | ------------------------ |
+| `aws_region`         | (requerido)    | Región AWS para la infra |
+| `cluster_name`       | `eks-<suffix>` | Nombre del cluster EKS   |
+| `vpc_cidr`           | `10.0.0.0/16`  | CIDR del VPC             |
+| `kubernetes_version` | `1.27`         | Versión de Kubernetes    |
 
 Modifica `variables.tf` para cambiar defaults.
 
@@ -238,18 +234,22 @@ El cluster genera:
 ## Troubleshooting
 
 ### Error: "Workspace does not exist"
+
 - **Causa**: `destroy` intenta eliminar un workspace que no existe.
 - **Solución**: Ejecuta `apply` primero para crear el workspace.
 
 ### Error: "Failed to select workspace: EOF"
+
 - **Causa**: `TF_WORKSPACE` no coincide con el prefijo configurado en `versions.tf`.
 - **Solución**: El workflow ahora usa `-input=false` para evitar prompts. Si persiste, verifica `TF_WORKSPACE` en el job.
 
 ### Error: "AWS region is required"
+
 - **Causa**: Falta `secrets.AWS_REGION` o no hay input `region`.
 - **Solución**: Configura el secreto `AWS_REGION` en GitHub o pasa `region` al workflow.
 
 ### Error: "TFC_TOKEN and TFC_ORG must be set"
+
 - **Causa**: Secretos no configurados en GitHub.
 - **Solución**: Agrega `TFC_TOKEN` y `TFC_ORG` en Settings → Secrets and variables → Actions.
 
@@ -287,6 +287,7 @@ main (cluster EKS base)
 **Para desarrollar una rama:**
 
 1. Crea rama desde `main`:
+
    ```bash
    git checkout -b feature/nginx-plus
    ```
@@ -294,6 +295,7 @@ main (cluster EKS base)
 2. Modifica los archivos en `modules/nginx/`
 
 3. Prueba localmente:
+
    ```bash
    terraform plan -var=enable_nginx=true
    ```
