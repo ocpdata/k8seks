@@ -77,7 +77,7 @@ variable "enable_waf" {
 variable "waf_image_tag" {
   description = "NGINX Plus Ingress Controller image tag when WAF is enabled."
   type        = string
-  default     = "5.3.3"
+  default     = "5.2.1"
 }
 
 variable "helm_values" {
