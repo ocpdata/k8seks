@@ -87,16 +87,16 @@ resource "helm_release" "nginx" {
     }
   }
 
-  # Configure NGINX Plus features
+  # Configure NGINX Plus
   set {
     name  = "controller.nginxPlus"
-    value = "false"
+    value = "true"
   }
 
-  # Use public NGINX OSS image (NGINX One Agent works with both Plus and OSS)
+  # Use NGINX Plus image from the private registry
   set {
     name  = "controller.image.repository"
-    value = "nginx/nginx-ingress"
+    value = "private-registry.nginx.com/nginx-plus/nginx-ingress"
   }
 
   set {
