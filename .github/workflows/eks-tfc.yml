@@ -60,7 +60,7 @@ jobs:
       TFC_TOKEN: ${{ secrets.TFC_TOKEN }}
       TFC_ORG: ${{ secrets.TFC_ORG }}
       TF_TOKEN_app_terraform_io: ${{ secrets.TFC_TOKEN }}
-      TF_WORKSPACE: k8seks
+      TF_WORKSPACE: eks-k8seks
       AWS_REGION: ${{ inputs.region != '' && inputs.region || secrets.AWS_REGION }}
       WORKSPACE_SUFFIX: k8seks
       CLUSTER_NAME_OVERRIDE: ${{ inputs.cluster_name }}
@@ -128,7 +128,7 @@ jobs:
       TFC_TOKEN: ${{ secrets.TFC_TOKEN }}
       TFC_ORG: ${{ secrets.TFC_ORG }}
       TF_TOKEN_app_terraform_io: ${{ secrets.TFC_TOKEN }}
-      TF_WORKSPACE: k8seks
+      TF_WORKSPACE: eks-k8seks
       AWS_REGION: ${{ inputs.region != '' && inputs.region || secrets.AWS_REGION }}
       WORKSPACE_SUFFIX: k8seks
       CLUSTER_NAME_OVERRIDE: ${{ inputs.cluster_name }}
@@ -179,7 +179,7 @@ jobs:
       TFC_TOKEN: ${{ secrets.TFC_TOKEN }}
       TFC_ORG: ${{ secrets.TFC_ORG }}
       TF_TOKEN_app_terraform_io: ${{ secrets.TFC_TOKEN }}
-      TF_WORKSPACE: k8seks
+      TF_WORKSPACE: eks-k8seks
       AWS_REGION: ${{ inputs.region != '' && inputs.region || secrets.AWS_REGION }}
       WORKSPACE_SUFFIX: k8seks
       CLUSTER_NAME_OVERRIDE: ${{ inputs.cluster_name }}
@@ -222,7 +222,7 @@ jobs:
             -var="cluster_name=${CLUSTER_NAME}" \
             -var="enable_nginx=true" \
             -var="nginx_repo_crt=${NGINX_REPO_CRT:-}" \
-            -var="nginx_repo_key=${NGINX_RE PO_KEY:-}" \
+            -var="nginx_repo_key=${NGINX_REPO_KEY:-}" \
             -var="license_jwt=${LICENSE_JWT:-}" \
             -var="data_plane_key=${DATA_PLANE_KEY:-}"
         env:
@@ -239,7 +239,7 @@ jobs:
       TFC_TOKEN: ${{ secrets.TFC_TOKEN }}
       TFC_ORG: ${{ secrets.TFC_ORG }}
       TF_TOKEN_app_terraform_io: ${{ secrets.TFC_TOKEN }}
-      TF_WORKSPACE: k8seks
+      TF_WORKSPACE: eks-k8seks
       AWS_REGION: ${{ inputs.region != '' && inputs.region || secrets.AWS_REGION }}
       WORKSPACE_SUFFIX: k8seks
       CLUSTER_NAME_OVERRIDE: ${{ inputs.cluster_name }}
