@@ -55,15 +55,15 @@ resource "kubernetes_secret" "regcred" {
   type = "kubernetes.io/dockerconfigjson"
 
   data = {
-    ".dockerconfigjson" = base64encode(jsonencode({
+    ".dockerconfigjson" = jsonencode({
       auths = {
         "private-registry.nginx.com" = {
-          username = var.license_jwt
+          username = trimspace(var.license_jwt)
           password = "none"
-          auth     = base64encode("${var.license_jwt}:none")
+          auth     = base64encode("${trimspace(var.license_jwt)}:none")
         }
       }
-    }))
+    })
   }
 
   depends_on = [kubernetes_namespace.nginx]
