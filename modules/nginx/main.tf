@@ -1,7 +1,7 @@
 # This module deploys NGINX Plus with NGINX One Agent on the EKS cluster
 
 locals {
-  nginx_agent_values = var.data_plane_key != "" ? <<-YAML
+  nginx_agent_values = var.data_plane_key != "" ? trimspace(<<-YAML
 controller:
   volumes:
     - name: nginx-agent-state
@@ -14,7 +14,7 @@ controller:
     - name: nginx-agent-log
       mountPath: /var/log/nginx-agent
 YAML
-  : ""
+  ) : ""
 }
 
 terraform {
