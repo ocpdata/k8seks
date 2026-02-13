@@ -78,36 +78,26 @@ resource "helm_release" "nginx" {
   wait             = false
   timeout          = 600
 
-  # Configure image pull secrets for private registry
+  # Configure image pull secrets for private registry (chart 1.3.2)
   dynamic "set" {
     for_each = var.nginx_repo_crt != "" && var.nginx_repo_key != "" ? [1] : []
     content {
-      name  = "controller.imagePullSecretName"
+      name  = "controller.serviceAccount.imagePullSecretName"
       value = "nginx-repo"
     }
   }
 
-  # Ensure the secret is injected into imagePullSecrets for this chart version
   dynamic "set" {
     for_each = var.nginx_repo_crt != "" && var.nginx_repo_key != "" ? [1] : []
     content {
-      name  = "controller.image.pullSecrets[0].name"
-      value = "nginx-repo"
-    }
-  }
-
-  # Fallback for charts that use controller.imagePullSecrets
-  dynamic "set" {
-    for_each = var.nginx_repo_crt != "" && var.nginx_repo_key != "" ? [1] : []
-    content {
-      name  = "controller.imagePullSecrets[0].name"
+      name  = "controller.serviceAccount.imagePullSecretsNames[0]"
       value = "nginx-repo"
     }
   }
 
   # Configure NGINX Plus
   set {
-    name  = "controller.nginxPlus"
+    name  = "nginxplus"
     value = "true"
   }
 
