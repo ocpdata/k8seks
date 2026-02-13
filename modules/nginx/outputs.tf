@@ -19,8 +19,8 @@ output "release_version" {
 }
 
 output "license_secret_name" {
-  description = "Name of the Kubernetes secret containing NGINX One Agent license."
-  value       = try(kubernetes_secret.nginx_license[0].metadata[0].name, null)
+  description = "Name of the Kubernetes secret containing NGINX Plus license JWT."
+  value       = try(kubernetes_secret.nplus_license[0].metadata[0].name, null)
 }
 
 output "nginx_enabled" {
@@ -30,5 +30,5 @@ output "nginx_enabled" {
 
 output "nginx_one_agent_enabled" {
   description = "Whether NGINX One Agent is enabled."
-  value       = var.enable_nginx_one_agent
+  value       = false
 }

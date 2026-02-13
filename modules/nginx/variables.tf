@@ -13,7 +13,7 @@ variable "namespace" {
 variable "helm_repository" {
   description = "NGINX Helm repository URL."
   type        = string
-  default     = "https://helm.nginx.com/stable"
+  default     = "oci://ghcr.io/nginx/charts"
 }
 
 variable "helm_chart" {
@@ -25,7 +25,13 @@ variable "helm_chart" {
 variable "chart_version" {
   description = "NGINX Ingress Controller Helm chart version."
   type        = string
-  default     = "1.3.2"
+  default     = "2.4.3"
+}
+
+variable "nginx_plus_image_tag" {
+  description = "NGINX Plus Ingress Controller image tag."
+  type        = string
+  default     = "5.3.3"
 }
 
 variable "nginx_repo_crt" {

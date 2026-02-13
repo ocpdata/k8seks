@@ -25,40 +25,45 @@ resource "kubernetes_namespace" "nginx" {
   }
 }
 
-# Create docker registry secret for NGINX Plus repository access
-# This uses certificate-based authentication for private-registry.nginx.com
-resource "kubernetes_secret" "nginx_registry" {
-  count = var.enabled && var.nginx_repo_crt != "" && var.nginx_repo_key != "" ? 1 : 0
+# Create secret for NGINX Plus license JWT
+resource "kubernetes_secret" "nplus_license" {
+  count = var.enabled && var.license_jwt != "" ? 1 : 0
 
   metadata {
-    name      = "nginx-repo"
+    name      = "nplus-license"
     namespace = var.namespace
   }
 
   type = "Opaque"
 
   data = {
-    "nginx-repo.crt" = var.nginx_repo_crt
-    "nginx-repo.key" = var.nginx_repo_key
+    "license.jwt" = var.license_jwt
   }
 
   depends_on = [kubernetes_namespace.nginx]
 }
 
-# Create secret for NGINX One Agent license and data plane key
-resource "kubernetes_secret" "nginx_license" {
-  count = var.enabled && (var.license_jwt != "" || var.data_plane_key != "") ? 1 : 0
+# Create docker registry secret for private-registry.nginx.com
+resource "kubernetes_secret" "regcred" {
+  count = var.enabled && var.license_jwt != "" ? 1 : 0
 
   metadata {
-    name      = "nginx-license"
+    name      = "regcred"
     namespace = var.namespace
   }
 
-  type = "Opaque"
+  type = "kubernetes.io/dockerconfigjson"
 
   data = {
-    "license.jwt"     = var.license_jwt
-    "data.plane.key"  = var.data_plane_key
+    ".dockerconfigjson" = base64encode(jsonencode({
+      auths = {
+        "private-registry.nginx.com" = {
+          username = var.license_jwt
+          password = "none"
+          auth     = base64encode("${var.license_jwt}:none")
+        }
+      }
+    }))
   }
 
   depends_on = [kubernetes_namespace.nginx]
@@ -78,25 +83,39 @@ resource "helm_release" "nginx" {
   wait             = false
   timeout          = 600
 
-  # Configure image pull secrets for private registry (chart 1.3.2)
+  # Configure image pull secret for private registry (OCI chart)
   dynamic "set" {
-    for_each = var.nginx_repo_crt != "" && var.nginx_repo_key != "" ? [1] : []
+    for_each = var.license_jwt != "" ? [1] : []
     content {
-      name  = "controller.serviceAccount.imagePullSecretsNames[0]"
-      value = "nginx-repo"
+      name  = "controller.serviceAccount.imagePullSecretName"
+      value = "regcred"
     }
   }
 
   # Configure NGINX Plus
   set {
-    name  = "nginxplus"
+    name  = "controller.nginxplus"
     value = "true"
   }
 
   # Use NGINX Plus image from the private registry
   set {
     name  = "controller.image.repository"
-    value = "private-registry.nginx.com/nginx-plus/nginx-ingress"
+    value = "private-registry.nginx.com/nginx-ic/nginx-plus-ingress"
+  }
+
+  set {
+    name  = "controller.image.tag"
+    value = var.nginx_plus_image_tag
+  }
+
+  # License JWT secret for NGINX Plus
+  dynamic "set" {
+    for_each = var.license_jwt != "" ? [1] : []
+    content {
+      name  = "controller.mgmt.licenseTokenSecretName"
+      value = "nplus-license"
+    }
   }
 
   set {
@@ -109,36 +128,11 @@ resource "helm_release" "nginx" {
     value = "LoadBalancer"
   }
 
-  # Configure NGINX One Agent if license and data plane key provided
-  dynamic "set" {
-    for_each = var.license_jwt != "" && var.data_plane_key != "" ? [1] : []
-    content {
-      name  = "nginxOneAgent.enabled"
-      value = var.enable_nginx_one_agent
-    }
-  }
-
-  dynamic "set" {
-    for_each = var.license_jwt != "" && var.data_plane_key != "" ? [1] : []
-    content {
-      name  = "nginxOneAgent.licenseSecret"
-      value = "nginx-license"
-    }
-  }
-
-  dynamic "set" {
-    for_each = var.license_jwt != "" && var.data_plane_key != "" ? [1] : []
-    content {
-      name  = "nginxOneAgent.dataPlaneKeySecret"
-      value = "nginx-license"
-    }
-  }
-
   values = var.helm_values != "" ? [var.helm_values] : []
 
   depends_on = [
     kubernetes_namespace.nginx,
-    kubernetes_secret.nginx_registry,
-    kubernetes_secret.nginx_license
+    kubernetes_secret.regcred,
+    kubernetes_secret.nplus_license
   ]
 }
