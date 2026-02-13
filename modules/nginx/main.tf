@@ -69,6 +69,24 @@ resource "kubernetes_secret" "regcred" {
   depends_on = [kubernetes_namespace.nginx]
 }
 
+# Create secret for NGINX One Agent dataplane key
+resource "kubernetes_secret" "nginx_agent" {
+  count = var.enabled && var.data_plane_key != "" ? 1 : 0
+
+  metadata {
+    name      = "nginx-agent"
+    namespace = var.namespace
+  }
+
+  type = "Opaque"
+
+  data = {
+    "dataplane.key" = trimspace(var.data_plane_key)
+  }
+
+  depends_on = [kubernetes_namespace.nginx]
+}
+
 # Deploy NGINX Plus Ingress Controller with NGINX One Agent
 resource "helm_release" "nginx" {
   count            = var.enabled ? 1 : 0
@@ -118,6 +136,23 @@ resource "helm_release" "nginx" {
     }
   }
 
+  # Configure NGINX One Agent
+  dynamic "set" {
+    for_each = var.data_plane_key != "" ? [1] : []
+    content {
+      name  = "nginxAgent.enable"
+      value = var.enable_nginx_one_agent
+    }
+  }
+
+  dynamic "set" {
+    for_each = var.data_plane_key != "" ? [1] : []
+    content {
+      name  = "nginxAgent.dataplaneKeySecretName"
+      value = "nginx-agent"
+    }
+  }
+
   set {
     name  = "controller.kind"
     value = "daemonset"
@@ -133,6 +168,7 @@ resource "helm_release" "nginx" {
   depends_on = [
     kubernetes_namespace.nginx,
     kubernetes_secret.regcred,
-    kubernetes_secret.nplus_license
+    kubernetes_secret.nplus_license,
+    kubernetes_secret.nginx_agent
   ]
 }

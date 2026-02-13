@@ -30,5 +30,5 @@ output "nginx_enabled" {
 
 output "nginx_one_agent_enabled" {
   description = "Whether NGINX One Agent is enabled."
-  value       = false
+  value       = var.enable_nginx_one_agent
 }
