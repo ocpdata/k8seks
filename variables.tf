@@ -181,7 +181,7 @@ variable "cine_service_port" {
 variable "cine_command" {
   description = "Command to run in container."
   type        = list(string)
-  default     = ["node", "-e", "require('http').createServer((req,res)=>res.end('Hello from Cine')).listen(3000)"]
+  default     = []
 }
 
 variable "cine_args" {
