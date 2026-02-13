@@ -1,5 +1,22 @@
 # This module deploys NGINX Plus with NGINX One Agent on the EKS cluster
 
+locals {
+  nginx_agent_values = var.data_plane_key != "" ? <<-YAML
+controller:
+  volumes:
+    - name: nginx-agent-state
+      emptyDir: {}
+    - name: nginx-agent-log
+      emptyDir: {}
+  volumeMounts:
+    - name: nginx-agent-state
+      mountPath: /var/lib/nginx-agent
+    - name: nginx-agent-log
+      mountPath: /var/log/nginx-agent
+YAML
+  : ""
+}
+
 terraform {
   required_providers {
     helm = {
@@ -153,47 +170,6 @@ resource "helm_release" "nginx" {
     }
   }
 
-  # Provide writable paths for nginx-agent runtime data
-  set {
-    name  = "controller.volumes[0].name"
-    value = "nginx-agent-state"
-  }
-
-  set {
-    name  = "controller.volumes[0].emptyDir"
-    value = "{}"
-  }
-
-  set {
-    name  = "controller.volumes[1].name"
-    value = "nginx-agent-log"
-  }
-
-  set {
-    name  = "controller.volumes[1].emptyDir"
-    value = "{}"
-  }
-
-  set {
-    name  = "controller.volumeMounts[0].name"
-    value = "nginx-agent-state"
-  }
-
-  set {
-    name  = "controller.volumeMounts[0].mountPath"
-    value = "/var/lib/nginx-agent"
-  }
-
-  set {
-    name  = "controller.volumeMounts[1].name"
-    value = "nginx-agent-log"
-  }
-
-  set {
-    name  = "controller.volumeMounts[1].mountPath"
-    value = "/var/log/nginx-agent"
-  }
-
   set {
     name  = "controller.kind"
     value = "daemonset"
@@ -204,7 +180,7 @@ resource "helm_release" "nginx" {
     value = "LoadBalancer"
   }
 
-  values = var.helm_values != "" ? [var.helm_values] : []
+  values = compact([var.helm_values, local.nginx_agent_values])
 
   depends_on = [
     kubernetes_namespace.nginx,
