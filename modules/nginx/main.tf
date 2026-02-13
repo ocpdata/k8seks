@@ -34,12 +34,14 @@ resource "kubernetes_secret" "nginx_registry" {
     namespace = var.namespace
   }
 
-  type = "kubernetes.io/dockercfg"
+  type = "kubernetes.io/dockerconfigjson"
 
   data = {
-    ".dockercfg" = jsonencode({
-      "private-registry.nginx.com" = {
-        "auth" = base64encode("${var.nginx_repo_crt}:${var.nginx_repo_key}")
+    ".dockerconfigjson" = jsonencode({
+      "auths" = {
+        "private-registry.nginx.com" = {
+          "auth" = base64encode("${var.nginx_repo_crt}:${var.nginx_repo_key}")
+        }
       }
     })
   }
