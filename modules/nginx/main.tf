@@ -197,6 +197,30 @@ resource "helm_release" "nginx" {
     }
   }
 
+  dynamic "set" {
+    for_each = var.data_plane_key != "" ? [1] : []
+    content {
+      name  = "nginxAgent.endpointHost"
+      value = "agent.connect.nginx.com"
+    }
+  }
+
+  dynamic "set" {
+    for_each = var.data_plane_key != "" ? [1] : []
+    content {
+      name  = "nginxAgent.endpointPort"
+      value = "443"
+    }
+  }
+
+  dynamic "set" {
+    for_each = var.data_plane_key != "" ? [1] : []
+    content {
+      name  = "nginxAgent.tlsSkipVerify"
+      value = "false"
+    }
+  }
+
   set {
     name  = "controller.kind"
     value = "daemonset"
