@@ -25,6 +25,14 @@ on:
         options:
           - "false"
           - "true"
+      build_waf_custom_image:
+        description: "Build custom WAF image in workflow (true/false)"
+        required: false
+        default: "false"
+        type: choice
+        options:
+          - "false"
+          - "true"
       nginx_waf_image_repository:
         description: "Optional custom WAF image repository"
         required: false
@@ -61,6 +69,7 @@ on:
 
 permissions:
   contents: write
+  packages: write
 
 jobs:
   prep:
@@ -76,6 +85,66 @@ jobs:
           fi
         env:
           AWS_REGION: ${{ inputs.region != '' && inputs.region || secrets.AWS_REGION }}
+
+  build-waf-image:
+    runs-on: ubuntu-latest
+    needs: [prep]
+    if: ${{ inputs.enable_waf == 'true' && inputs.build_waf_custom_image == 'true' }}
+    outputs:
+      waf_image_repository: ${{ steps.meta.outputs.waf_image_repository }}
+      waf_image_tag: ${{ steps.meta.outputs.waf_image_tag }}
+    steps:
+      - name: Set image metadata
+        id: meta
+        shell: bash
+        run: |
+          set -euo pipefail
+          REPO="ghcr.io/${{ github.repository_owner }}/nginx-plus-ingress-waf"
+          TAG="${{ inputs.nginx_waf_image_tag }}"
+          echo "waf_image_repository=${REPO}" >> "$GITHUB_OUTPUT"
+          echo "waf_image_tag=${TAG}" >> "$GITHUB_OUTPUT"
+
+      - name: Checkout NGINX Ingress source
+        shell: bash
+        run: |
+          set -euo pipefail
+          git clone --depth 1 --branch v5.3.3 https://github.com/nginx/kubernetes-ingress.git
+
+      - name: Prepare NGINX Plus cert/key
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd kubernetes-ingress
+          cat > nginx-repo.crt <<'CRT'
+          ${{ secrets.NGINX_REPO_CRT }}
+          CRT
+          cat > nginx-repo.key <<'KEY'
+          ${{ secrets.NGINX_REPO_KEY }}
+          KEY
+
+      - name: Login F5 registry
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker login private-registry.nginx.com --username "${LICENSE_JWT}" --password "none"
+        env:
+          LICENSE_JWT: ${{ secrets.LICENSE_JWT }}
+
+      - name: Login GHCR
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+
+      - name: Build and push custom WAF image
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd kubernetes-ingress
+          REPO="${{ steps.meta.outputs.waf_image_repository }}"
+          TAG="${{ steps.meta.outputs.waf_image_tag }}"
+          make debian-image-nap-plus PREFIX="${REPO}" TARGET=download
+          make push PREFIX="${REPO}" TAG="${TAG}"
 
   plan:
     runs-on: ubuntu-latest
@@ -238,8 +307,8 @@ jobs:
 
   apply-nginx:
     runs-on: ubuntu-latest
-    needs: [prep, plan, apply-eks]
-    if: ${{ always() && inputs.enable_nginx == 'true' && (inputs.terraform_target == 'module.nginx' || needs.apply-eks.result == 'success') && inputs.terraform_target != 'module.eks' && inputs.terraform_target != 'module.cine' }}
+    needs: [prep, plan, apply-eks, build-waf-image]
+    if: ${{ always() && inputs.enable_nginx == 'true' && (inputs.terraform_target == 'module.nginx' || needs.apply-eks.result == 'success') && inputs.terraform_target != 'module.eks' && inputs.terraform_target != 'module.cine' && (needs.build-waf-image.result == 'success' || needs.build-waf-image.result == 'skipped') }}
     env:
       TFC_TOKEN: ${{ secrets.TFC_TOKEN }}
       TFC_ORG: ${{ secrets.TFC_ORG }}
@@ -248,6 +317,8 @@ jobs:
       AWS_REGION: ${{ inputs.region != '' && inputs.region || secrets.AWS_REGION }}
       WORKSPACE_SUFFIX: k8seks
       CLUSTER_NAME_OVERRIDE: ${{ inputs.cluster_name }}
+      WAF_IMAGE_REPOSITORY: ${{ needs.build-waf-image.outputs.waf_image_repository != '' && needs.build-waf-image.outputs.waf_image_repository || inputs.nginx_waf_image_repository }}
+      WAF_IMAGE_TAG: ${{ needs.build-waf-image.outputs.waf_image_tag != '' && needs.build-waf-image.outputs.waf_image_tag || inputs.nginx_waf_image_tag }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -307,8 +378,8 @@ jobs:
             -var="cluster_name=${CLUSTER_NAME}" \
             -var="enable_nginx=true" \
             -var="enable_nginx_waf=${{ inputs.enable_waf }}" \
-            -var="nginx_waf_image_repository=${{ inputs.nginx_waf_image_repository }}" \
-            -var="nginx_waf_image_tag=${{ inputs.nginx_waf_image_tag }}" \
+            -var="nginx_waf_image_repository=${WAF_IMAGE_REPOSITORY}" \
+            -var="nginx_waf_image_tag=${WAF_IMAGE_TAG}" \
             -var="nginx_repo_crt=${NGINX_REPO_CRT:-}" \
             -var="nginx_repo_key=${NGINX_REPO_KEY:-}" \
             -var="license_jwt=${LICENSE_JWT:-}" \
