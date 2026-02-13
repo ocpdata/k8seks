@@ -16,7 +16,7 @@ controller:
 YAML
   ) : ""
 
-  controller_image_repository = var.enable_waf ? "private-registry.nginx.com/nginx-ic-nap-v5/nginx-plus-ingress" : "private-registry.nginx.com/nginx-ic/nginx-plus-ingress"
+  controller_image_repository = var.enable_waf ? var.waf_image_repository : "private-registry.nginx.com/nginx-ic/nginx-plus-ingress"
   controller_image_tag        = var.enable_waf ? var.waf_image_tag : var.nginx_plus_image_tag
 }
 
@@ -249,6 +249,54 @@ resource "helm_release" "nginx" {
     for_each = var.data_plane_key != "" ? [1] : []
     content {
       name  = "nginxAgent.instanceManager.tls.skipVerify"
+      value = "false"
+    }
+  }
+
+  dynamic "set" {
+    for_each = var.data_plane_key != "" ? [1] : []
+    content {
+      name  = "controller.env[0].name"
+      value = "NGINX_AGENT_SERVER_HOST"
+    }
+  }
+
+  dynamic "set" {
+    for_each = var.data_plane_key != "" ? [1] : []
+    content {
+      name  = "controller.env[0].value"
+      value = "agent.connect.nginx.com"
+    }
+  }
+
+  dynamic "set" {
+    for_each = var.data_plane_key != "" ? [1] : []
+    content {
+      name  = "controller.env[1].name"
+      value = "NGINX_AGENT_SERVER_GRPCPORT"
+    }
+  }
+
+  dynamic "set" {
+    for_each = var.data_plane_key != "" ? [1] : []
+    content {
+      name  = "controller.env[1].value"
+      value = "443"
+    }
+  }
+
+  dynamic "set" {
+    for_each = var.data_plane_key != "" ? [1] : []
+    content {
+      name  = "controller.env[2].name"
+      value = "NGINX_AGENT_TLS_SKIP_VERIFY"
+    }
+  }
+
+  dynamic "set" {
+    for_each = var.data_plane_key != "" ? [1] : []
+    content {
+      name  = "controller.env[2].value"
       value = "false"
     }
   }

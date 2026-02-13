@@ -33,6 +33,7 @@ module "nginx" {
   enable_nginx_one_agent   = var.enable_nginx_one_agent
   enable_waf               = var.enable_nginx_waf
   waf_image_tag            = var.nginx_waf_image_tag
+  waf_image_repository     = var.nginx_waf_image_repository
 
   tags = var.tags
 

@@ -140,6 +140,12 @@ variable "nginx_waf_image_tag" {
   default     = "5.2.1"
 }
 
+variable "nginx_waf_image_repository" {
+  description = "NGINX Plus Ingress Controller image repository when WAF is enabled."
+  type        = string
+  default     = "private-registry.nginx.com/nginx-ic-nap-v5/nginx-plus-ingress"
+}
+
 # ============================================================================
 # Root Variables - Tags
 # ============================================================================
