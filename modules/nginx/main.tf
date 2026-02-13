@@ -198,7 +198,7 @@ resource "helm_release" "nginx" {
   }
 
   dynamic "set" {
-    for_each = var.data_plane_key != "" ? [1] : []
+    for_each = var.data_plane_key != "" && !var.enable_waf ? [1] : []
     content {
       name  = "nginxAgent.endpointHost"
       value = "agent.connect.nginx.com"
@@ -206,7 +206,7 @@ resource "helm_release" "nginx" {
   }
 
   dynamic "set" {
-    for_each = var.data_plane_key != "" ? [1] : []
+    for_each = var.data_plane_key != "" && !var.enable_waf ? [1] : []
     content {
       name  = "nginxAgent.endpointPort"
       value = "443"
@@ -214,7 +214,7 @@ resource "helm_release" "nginx" {
   }
 
   dynamic "set" {
-    for_each = var.data_plane_key != "" ? [1] : []
+    for_each = var.data_plane_key != "" && !var.enable_waf ? [1] : []
     content {
       name  = "nginxAgent.tlsSkipVerify"
       value = "false"
@@ -222,7 +222,7 @@ resource "helm_release" "nginx" {
   }
 
   dynamic "set" {
-    for_each = var.data_plane_key != "" ? [1] : []
+    for_each = var.data_plane_key != "" && !var.enable_waf ? [1] : []
     content {
       name  = "nginxAgent.instanceManager.host"
       value = "agent.connect.nginx.com"
@@ -230,7 +230,7 @@ resource "helm_release" "nginx" {
   }
 
   dynamic "set" {
-    for_each = var.data_plane_key != "" ? [1] : []
+    for_each = var.data_plane_key != "" && !var.enable_waf ? [1] : []
     content {
       name  = "nginxAgent.instanceManager.grpcPort"
       value = "443"
@@ -238,7 +238,7 @@ resource "helm_release" "nginx" {
   }
 
   dynamic "set" {
-    for_each = var.data_plane_key != "" ? [1] : []
+    for_each = var.data_plane_key != "" && !var.enable_waf ? [1] : []
     content {
       name  = "nginxAgent.instanceManager.tls.enabled"
       value = "true"
@@ -246,7 +246,7 @@ resource "helm_release" "nginx" {
   }
 
   dynamic "set" {
-    for_each = var.data_plane_key != "" ? [1] : []
+    for_each = var.data_plane_key != "" && !var.enable_waf ? [1] : []
     content {
       name  = "nginxAgent.instanceManager.tls.skipVerify"
       value = "false"
