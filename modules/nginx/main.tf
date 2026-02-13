@@ -153,6 +153,47 @@ resource "helm_release" "nginx" {
     }
   }
 
+  # Provide writable paths for nginx-agent runtime data
+  set {
+    name  = "controller.volumes[0].name"
+    value = "nginx-agent-state"
+  }
+
+  set {
+    name  = "controller.volumes[0].emptyDir"
+    value = "{}"
+  }
+
+  set {
+    name  = "controller.volumes[1].name"
+    value = "nginx-agent-log"
+  }
+
+  set {
+    name  = "controller.volumes[1].emptyDir"
+    value = "{}"
+  }
+
+  set {
+    name  = "controller.volumeMounts[0].name"
+    value = "nginx-agent-state"
+  }
+
+  set {
+    name  = "controller.volumeMounts[0].mountPath"
+    value = "/var/lib/nginx-agent"
+  }
+
+  set {
+    name  = "controller.volumeMounts[1].name"
+    value = "nginx-agent-log"
+  }
+
+  set {
+    name  = "controller.volumeMounts[1].mountPath"
+    value = "/var/log/nginx-agent"
+  }
+
   set {
     name  = "controller.kind"
     value = "daemonset"
