@@ -73,7 +73,7 @@ resource "kubernetes_secret" "regcred" {
 resource "helm_release" "nginx" {
   count            = var.enabled ? 1 : 0
   name             = "nginx-plus"
-  repository       = var.helm_repository
+  repository       = var.helm_repository != "" ? var.helm_repository : null
   chart            = var.helm_chart
   namespace        = var.namespace
   create_namespace = false

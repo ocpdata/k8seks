@@ -13,13 +13,13 @@ variable "namespace" {
 variable "helm_repository" {
   description = "NGINX Helm repository URL."
   type        = string
-  default     = "oci://ghcr.io/nginx/charts"
+  default     = ""
 }
 
 variable "helm_chart" {
   description = "NGINX Helm chart name."
   type        = string
-  default     = "nginx-ingress"
+  default     = "oci://ghcr.io/nginx/charts/nginx-ingress"
 }
 
 variable "chart_version" {
