@@ -75,6 +75,8 @@ resource "helm_release" "nginx" {
   version          = var.chart_version
   force_update     = true
   recreate_pods    = true
+  wait             = false
+  timeout          = 600
 
   # Configure image pull secrets for private registry
   dynamic "set" {
