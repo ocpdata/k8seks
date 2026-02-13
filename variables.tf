@@ -137,7 +137,7 @@ variable "enable_nginx_waf" {
 variable "nginx_waf_image_tag" {
   description = "NGINX Plus Ingress Controller image tag when WAF is enabled."
   type        = string
-  default     = "5.3.3-alpine-fips"
+  default     = "5.3.3"
 }
 
 # ============================================================================
