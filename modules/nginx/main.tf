@@ -266,6 +266,7 @@ resource "helm_release" "nginx" {
     content {
       name  = "controller.env[0].value"
       value = "agent.connect.nginx.com"
+      type  = "string"
     }
   }
 
@@ -282,6 +283,7 @@ resource "helm_release" "nginx" {
     content {
       name  = "controller.env[1].value"
       value = "443"
+      type  = "string"
     }
   }
 
@@ -298,6 +300,7 @@ resource "helm_release" "nginx" {
     content {
       name  = "controller.env[2].value"
       value = "false"
+      type  = "string"
     }
   }
 
