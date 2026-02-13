@@ -87,6 +87,15 @@ resource "helm_release" "nginx" {
     }
   }
 
+  # Ensure the secret is injected into imagePullSecrets for this chart version
+  dynamic "set" {
+    for_each = var.nginx_repo_crt != "" && var.nginx_repo_key != "" ? [1] : []
+    content {
+      name  = "controller.image.pullSecrets[0].name"
+      value = "nginx-repo"
+    }
+  }
+
   # Configure NGINX Plus
   set {
     name  = "controller.nginxPlus"
