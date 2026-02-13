@@ -68,6 +68,18 @@ variable "enable_nginx_one_agent" {
   default     = true
 }
 
+variable "enable_waf" {
+  description = "Enable F5 WAF for NGINX (App Protect v5)."
+  type        = bool
+  default     = false
+}
+
+variable "waf_image_tag" {
+  description = "NGINX Plus Ingress Controller image tag when WAF is enabled."
+  type        = string
+  default     = "5.3.3-alpine-fips"
+}
+
 variable "helm_values" {
   description = "Additional Helm values for NGINX deployment (YAML string)."
   type        = string

@@ -15,6 +15,9 @@ controller:
       mountPath: /var/log/nginx-agent
 YAML
   ) : ""
+
+  controller_image_repository = var.enable_waf ? "private-registry.nginx.com/nginx-ic-nap-v5/nginx-plus-ingress" : "private-registry.nginx.com/nginx-ic/nginx-plus-ingress"
+  controller_image_tag        = var.enable_waf ? var.waf_image_tag : var.nginx_plus_image_tag
 }
 
 terraform {
@@ -136,12 +139,28 @@ resource "helm_release" "nginx" {
   # Use NGINX Plus image from the private registry
   set {
     name  = "controller.image.repository"
-    value = "private-registry.nginx.com/nginx-ic/nginx-plus-ingress"
+    value = local.controller_image_repository
   }
 
   set {
     name  = "controller.image.tag"
-    value = var.nginx_plus_image_tag
+    value = local.controller_image_tag
+  }
+
+  dynamic "set" {
+    for_each = var.enable_waf ? [1] : []
+    content {
+      name  = "controller.appprotect.enable"
+      value = "true"
+    }
+  }
+
+  dynamic "set" {
+    for_each = var.enable_waf ? [1] : []
+    content {
+      name  = "controller.appprotect.v5"
+      value = "true"
+    }
   }
 
   # License JWT secret for NGINX Plus

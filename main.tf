@@ -31,6 +31,8 @@ module "nginx" {
   license_jwt              = var.license_jwt
   data_plane_key           = var.data_plane_key
   enable_nginx_one_agent   = var.enable_nginx_one_agent
+  enable_waf               = var.enable_nginx_waf
+  waf_image_tag            = var.nginx_waf_image_tag
 
   tags = var.tags
 

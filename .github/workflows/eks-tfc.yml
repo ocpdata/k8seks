@@ -17,6 +17,14 @@ on:
         options:
           - "false"
           - "true"
+      enable_waf:
+        description: "Enable F5 WAF for NGINX (true/false)"
+        required: false
+        default: "false"
+        type: choice
+        options:
+          - "false"
+          - "true"
       enable_cine:
         description: "Deploy cine app (true/false)"
         required: false
@@ -130,6 +138,7 @@ jobs:
           fi
 
           ENABLE_NGINX="${{ inputs.enable_nginx }}"
+          ENABLE_WAF="${{ inputs.enable_waf }}"
           ENABLE_CINE="${{ inputs.enable_cine }}"
           TERRAFORM_TARGET="${{ inputs.terraform_target }}"
 
@@ -144,6 +153,7 @@ jobs:
             -var="aws_region=${AWS_REGION}" \
             -var="cluster_name=${CLUSTER_NAME}" \
             -var="enable_nginx=${ENABLE_NGINX}" \
+            -var="enable_nginx_waf=${ENABLE_WAF}" \
             -var="enable_cine=${ENABLE_CINE}" \
             -var="nginx_repo_crt=${NGINX_REPO_CRT:-}" \
             -var="nginx_repo_key=${NGINX_REPO_KEY:-}" \
@@ -276,6 +286,7 @@ jobs:
             -var="aws_region=${AWS_REGION}" \
             -var="cluster_name=${CLUSTER_NAME}" \
             -var="enable_nginx=true" \
+            -var="enable_nginx_waf=${{ inputs.enable_waf }}" \
             -var="nginx_repo_crt=${NGINX_REPO_CRT:-}" \
             -var="nginx_repo_key=${NGINX_REPO_KEY:-}" \
             -var="license_jwt=${LICENSE_JWT:-}" \
