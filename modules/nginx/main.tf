@@ -75,6 +75,8 @@ resource "helm_release" "nginx" {
   namespace        = var.namespace
   create_namespace = false
   version          = var.chart_version
+  force_update     = true
+  recreate_pods    = true
 
   # Configure image pull secrets for private registry
   dynamic "set" {
