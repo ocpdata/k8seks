@@ -39,12 +39,14 @@ function pageTemplate(title, subtitle, movies, error) {
     .map(
       (m) =>
         `<li class="card">
-          <img src="${normalizePosterUrl(m.Poster)}" alt="${m.Title}" onerror="this.src='${POSTER_PLACEHOLDER}'" />
-          <div>
-            <h3>${m.Title}</h3>
-            <p>${m.Year}</p>
-            <p class="type">${m.Type}</p>
-          </div>
+          <a class="card-link" href="/movie/${m.imdbID}">
+            <img src="${normalizePosterUrl(m.Poster)}" alt="${m.Title}" onerror="this.src='${POSTER_PLACEHOLDER}'" />
+            <div>
+              <h3>${m.Title}</h3>
+              <p>${m.Year}</p>
+              <p class="type">${m.Type}</p>
+            </div>
+          </a>
         </li>`,
     )
     .join("");
@@ -66,7 +68,8 @@ function pageTemplate(title, subtitle, movies, error) {
       a.btn { color: #0f172a; background: #38bdf8; padding: 10px 14px; border-radius: 8px; text-decoration: none; font-weight: 600; }
       main { padding: 24px; }
       ul { list-style: none; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 16px; }
-      .card { background: #1e293b; border-radius: 12px; padding: 12px; display: flex; gap: 12px; }
+      .card { background: #1e293b; border-radius: 12px; padding: 12px; }
+      .card-link { display: flex; gap: 12px; color: inherit; text-decoration: none; }
       .card img { width: 80px; height: 120px; object-fit: cover; border-radius: 8px; background: #0f172a; }
       .type { color: #94a3b8; font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; }
       .error { background: #7f1d1d; padding: 12px; border-radius: 8px; margin-bottom: 16px; }
@@ -86,6 +89,52 @@ function pageTemplate(title, subtitle, movies, error) {
     <main>
       ${errorBlock}
       <ul>${items}</ul>
+    </main>
+  </body>
+</html>`;
+}
+
+function detailTemplate(movie, error) {
+  const errorBlock = error ? `<div class="error">${error}</div>` : "";
+  const poster = movie ? normalizePosterUrl(movie.Poster) : POSTER_PLACEHOLDER;
+
+  return `<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>${movie ? movie.Title : "Detalle"}</title>
+    <style>
+      body { font-family: ui-sans-serif, system-ui; background: #0f172a; color: #e2e8f0; margin: 0; }
+      header { padding: 24px; background: #111827; }
+      h1 { margin: 0 0 8px; font-size: 28px; }
+      .sub { color: #94a3b8; }
+      nav { display: flex; gap: 12px; padding: 16px 24px; background: #0b1220; }
+      a.btn { color: #0f172a; background: #38bdf8; padding: 10px 14px; border-radius: 8px; text-decoration: none; font-weight: 600; }
+      main { padding: 24px; display: grid; gap: 16px; grid-template-columns: 200px 1fr; }
+      img { width: 200px; height: 300px; object-fit: cover; border-radius: 12px; background: #0f172a; }
+      .meta { color: #94a3b8; margin-top: 6px; }
+      .error { grid-column: 1 / -1; background: #7f1d1d; padding: 12px; border-radius: 8px; }
+      .plot { line-height: 1.6; }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>${movie ? movie.Title : "Detalle"}</h1>
+      <div class="sub">${movie ? `${movie.Year} · ${movie.Genre || ""}` : ""}</div>
+    </header>
+    <nav>
+      <a class="btn" href="/">Volver</a>
+    </nav>
+    <main>
+      ${errorBlock}
+      <img src="${poster}" alt="${movie ? movie.Title : "Poster"}" onerror="this.src='${POSTER_PLACEHOLDER}'" />
+      <div>
+        <div class="meta">${movie ? movie.Runtime || "" : ""}</div>
+        <div class="meta">${movie ? movie.Director || "" : ""}</div>
+        <div class="meta">${movie ? movie.Actors || "" : ""}</div>
+        <p class="plot">${movie ? movie.Plot || "Sin descripcion." : ""}</p>
+      </div>
     </main>
   </body>
 </html>`;
@@ -156,6 +205,27 @@ async function fetchByIds(ids) {
   }
 }
 
+async function fetchMovieDetail(id) {
+  if (!API_KEY) {
+    return { error: "OMDB_API_KEY no configurada.", movie: null };
+  }
+
+  try {
+    const url = new URL("https://www.omdbapi.com/");
+    url.searchParams.set("apikey", API_KEY);
+    url.searchParams.set("i", id);
+    url.searchParams.set("plot", "full");
+    const response = await fetch(url.toString());
+    const data = await response.json();
+    if (data.Response !== "True") {
+      return { error: data.Error || "No hay resultados.", movie: null };
+    }
+    return { error: "", movie: data };
+  } catch (err) {
+    return { error: "Error consultando OMDb.", movie: null };
+  }
+}
+
 const server = http.createServer(async (req, res) => {
   const requestUrl = new URL(req.url, `http://${req.headers.host}`);
   const path = requestUrl.pathname;
@@ -163,6 +233,15 @@ const server = http.createServer(async (req, res) => {
   if (path === "/healthz") {
     res.writeHead(200, { "Content-Type": "text/plain" });
     res.end("ok");
+    return;
+  }
+
+  if (path.startsWith("/movie/")) {
+    const id = path.split("/")[2] || "";
+    const { error, movie } = await fetchMovieDetail(id);
+    const html = detailTemplate(movie, error);
+    res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
+    res.end(html);
     return;
   }
 
