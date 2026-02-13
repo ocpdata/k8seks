@@ -32,7 +32,7 @@ on:
       nginx_waf_image_tag:
         description: "WAF image tag"
         required: false
-        default: "5.2.1"
+        default: "5.3.3"
       enable_waf_monitor_policy:
         description: "Deploy WAF monitor policy for cine (true/false)"
         required: false
