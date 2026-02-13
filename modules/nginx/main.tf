@@ -93,6 +93,12 @@ resource "helm_release" "nginx" {
     value = "true"
   }
 
+  # Specify NGINX Plus image repository
+  set {
+    name  = "controller.image.repository"
+    value = "private-registry.nginx.com/nginx-ic/nginx-plus-ingress"
+  }
+
   set {
     name  = "controller.kind"
     value = "daemonset"
