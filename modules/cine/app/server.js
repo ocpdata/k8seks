@@ -9,12 +9,22 @@ const CATEGORY_MAP = {
   other: { label: "Drama", query: "drama" },
 };
 
+const POSTER_PLACEHOLDER =
+  "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='240'><rect width='100%25' height='100%25' fill='%230f172a'/><text x='50%25' y='50%25' fill='%2394a3b8' font-size='14' font-family='sans-serif' dominant-baseline='middle' text-anchor='middle'>Sin poster</text></svg>";
+
+function normalizePosterUrl(url) {
+  if (!url || url === "N/A") {
+    return POSTER_PLACEHOLDER;
+  }
+  return url.replace(/^http:/, "https:");
+}
+
 function pageTemplate(title, subtitle, movies, error) {
   const items = movies
     .map(
       (m) =>
         `<li class="card">
-          <img src="${m.Poster !== "N/A" ? m.Poster : ""}" alt="${m.Title}" />
+          <img src="${normalizePosterUrl(m.Poster)}" alt="${m.Title}" onerror="this.src='${POSTER_PLACEHOLDER}'" />
           <div>
             <h3>${m.Title}</h3>
             <p>${m.Year}</p>
@@ -71,7 +81,7 @@ async function fetchMovies(query, year) {
     return { error: "OMDB_API_KEY no configurada.", movies: [] };
   }
 
-  const url = new URL("http://www.omdbapi.com/");
+  const url = new URL("https://www.omdbapi.com/");
   url.searchParams.set("apikey", API_KEY);
   url.searchParams.set("s", query);
   url.searchParams.set("type", "movie");
