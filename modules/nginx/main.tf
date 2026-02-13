@@ -18,6 +18,41 @@ YAML
 
   controller_image_repository = var.enable_waf ? var.waf_image_repository : "private-registry.nginx.com/nginx-ic/nginx-plus-ingress"
   controller_image_tag        = var.enable_waf ? var.waf_image_tag : var.nginx_plus_image_tag
+
+  nginx_agent_waf_config = trimspace(<<-YAML
+log:
+  level: info
+  path: ""
+
+allowed_directories:
+  - /etc/nginx
+  - /usr/lib/nginx/modules
+
+features:
+  - certificates
+  - connection
+  - metrics
+  - file-watcher
+
+command:
+  server:
+    host: agent.connect.nginx.com
+    port: 443
+  auth:
+    tokenpath: "/etc/nginx-agent/secrets/dataplane.key"
+  tls:
+    skip_verify: false
+
+nginx_app_protect:
+  report_interval: 15s
+  precompiled_publication: true
+
+extensions:
+  - nginx-app-protect
+
+config_dirs: "/etc/nginx:/usr/local/etc/nginx:/usr/share/nginx/modules:/etc/nms:/etc/app_protect"
+YAML
+  )
 }
 
 terraform {
@@ -102,6 +137,21 @@ resource "kubernetes_secret" "nginx_agent" {
 
   data = {
     "dataplane.key" = trimspace(var.data_plane_key)
+  }
+
+  depends_on = [kubernetes_namespace.nginx]
+}
+
+resource "kubernetes_config_map" "nginx_agent_waf_config" {
+  count = var.enabled && var.enable_waf && var.data_plane_key != "" ? 1 : 0
+
+  metadata {
+    name      = "nginx-agent-waf-config"
+    namespace = var.namespace
+  }
+
+  data = {
+    "nginx-agent.conf" = local.nginx_agent_waf_config
   }
 
   depends_on = [kubernetes_namespace.nginx]
@@ -253,6 +303,14 @@ resource "helm_release" "nginx" {
     }
   }
 
+  dynamic "set" {
+    for_each = var.data_plane_key != "" && var.enable_waf ? [1] : []
+    content {
+      name  = "nginxAgent.customConfigMap"
+      value = "nginx-agent-waf-config"
+    }
+  }
+
   set {
     name  = "controller.kind"
     value = "daemonset"
@@ -269,6 +327,7 @@ resource "helm_release" "nginx" {
     kubernetes_namespace.nginx,
     kubernetes_secret.regcred,
     kubernetes_secret.nplus_license,
-    kubernetes_secret.nginx_agent
+    kubernetes_secret.nginx_agent,
+    kubernetes_config_map.nginx_agent_waf_config
   ]
 }
