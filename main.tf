@@ -50,6 +50,7 @@ module "cine" {
   command            = var.cine_command
   args               = var.cine_args
   env                = var.cine_env
+  omdb_api_key        = var.omdb_api_key
   ingress_enabled    = var.cine_ingress_enabled
   ingress_host       = var.cine_ingress_host
   ingress_path       = var.cine_ingress_path

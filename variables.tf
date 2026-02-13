@@ -196,6 +196,13 @@ variable "cine_env" {
   default     = {}
 }
 
+variable "omdb_api_key" {
+  description = "OMDb API key for the cine app."
+  type        = string
+  default     = ""
+  sensitive   = true
+}
+
 variable "cine_ingress_enabled" {
   description = "Enable Ingress for cine."
   type        = bool

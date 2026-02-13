@@ -6,6 +6,27 @@ resource "kubernetes_namespace" "cine" {
   }
 }
 
+locals {
+  cine_command = length(var.command) > 0 ? var.command : (var.use_default_app ? ["node", "/app/server.js"] : null)
+  cine_args    = length(var.args) > 0 ? var.args : null
+}
+
+# ConfigMap with the cine app
+resource "kubernetes_config_map" "cine_app" {
+  count = var.enabled && var.use_default_app ? 1 : 0
+
+  metadata {
+    name      = "cine-app"
+    namespace = var.namespace
+  }
+
+  data = {
+    "server.js" = file("${path.module}/app/server.js")
+  }
+
+  depends_on = [kubernetes_namespace.cine]
+}
+
 # Deployment for cine app
 resource "kubernetes_deployment" "cine" {
   count = var.enabled ? 1 : 0
@@ -39,11 +60,19 @@ resource "kubernetes_deployment" "cine" {
           name  = "cine"
           image = var.image
 
-          command = length(var.command) > 0 ? var.command : null
-          args    = length(var.args) > 0 ? var.args : null
+          command = local.cine_command
+          args    = local.cine_args
 
           port {
             container_port = var.container_port
+          }
+
+          dynamic "env" {
+            for_each = var.omdb_api_key != "" ? [1] : []
+            content {
+              name  = "OMDB_API_KEY"
+              value = var.omdb_api_key
+            }
           }
 
           dynamic "env" {
@@ -53,12 +82,31 @@ resource "kubernetes_deployment" "cine" {
               value = env.value
             }
           }
+
+          dynamic "volume_mount" {
+            for_each = var.use_default_app ? [1] : []
+            content {
+              name       = "cine-app"
+              mount_path = "/app"
+              read_only  = true
+            }
+          }
+        }
+
+        dynamic "volume" {
+          for_each = var.use_default_app ? [1] : []
+          content {
+            name = "cine-app"
+            config_map {
+              name = kubernetes_config_map.cine_app[0].metadata[0].name
+            }
+          }
         }
       }
     }
   }
 
-  depends_on = [kubernetes_namespace.cine]
+  depends_on = [kubernetes_namespace.cine, kubernetes_config_map.cine_app]
 }
 
 # Service for cine app

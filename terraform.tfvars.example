@@ -74,6 +74,7 @@ cine_ingress_enabled     = true
 cine_ingress_host        = "cine.example.com"
 cine_ingress_path        = "/"
 cine_ingress_class_name  = "nginx"
+omdb_api_key             = ""
 
 # ============================================================================
 # Tags

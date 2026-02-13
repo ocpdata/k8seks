@@ -335,4 +335,7 @@ jobs:
             -target=module.cine \
             -var="aws_region=${AWS_REGION}" \
             -var="cluster_name=${CLUSTER_NAME}" \
-            -var="enable_cine=true"
+            -var="enable_cine=true" \
+            -var="omdb_api_key=${OMDB_API_KEY}"
+        env:
+          OMDB_API_KEY: ${{ secrets.OMDB_API_KEY }}
