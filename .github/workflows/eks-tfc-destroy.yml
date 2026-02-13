@@ -25,6 +25,14 @@ on:
         options:
           - "true"
           - "false"
+      cleanup_k8s_resources:
+        description: "Cleanup Kubernetes load balancers before destroy (true/false)"
+        required: false
+        default: "true"
+        type: choice
+        options:
+          - "true"
+          - "false"
 
 jobs:
   prep:
@@ -73,6 +81,67 @@ jobs:
           terraform init \
             -input=false \
             -backend-config="organization=${TFC_ORG}"
+
+      - name: Cleanup Kubernetes load balancers
+        if: ${{ inputs.cleanup_k8s_resources == 'true' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -n "${CLUSTER_NAME_OVERRIDE}" ]; then
+            CLUSTER_NAME="${CLUSTER_NAME_OVERRIDE}"
+          else
+            CLUSTER_NAME="eks-${WORKSPACE_SUFFIX}"
+          fi
+
+          VPC_ID=$(aws eks describe-cluster \
+            --region "${AWS_REGION}" \
+            --name "${CLUSTER_NAME}" \
+            --query 'cluster.resourcesVpcConfig.vpcId' \
+            --output text 2>/dev/null || true)
+
+          if [ -z "${VPC_ID}" ] || [ "${VPC_ID}" = "None" ]; then
+            echo "VPC not found for cluster ${CLUSTER_NAME}. Skipping cleanup."
+            exit 0
+          fi
+
+          ELB_ARNS=$(aws elbv2 describe-load-balancers \
+            --region "${AWS_REGION}" \
+            --query "LoadBalancers[?VpcId=='${VPC_ID}'].LoadBalancerArn" \
+            --output text || true)
+
+          if [ -n "${ELB_ARNS}" ]; then
+            for arn in ${ELB_ARNS}; do
+              echo "Deleting ELBv2: ${arn}"
+              aws elbv2 delete-load-balancer --region "${AWS_REGION}" --load-balancer-arn "${arn}" || true
+            done
+          fi
+
+          ELB_CLASSIC=$(aws elb describe-load-balancers \
+            --region "${AWS_REGION}" \
+            --query "LoadBalancerDescriptions[?VPCId=='${VPC_ID}'].LoadBalancerName" \
+            --output text || true)
+
+          if [ -n "${ELB_CLASSIC}" ]; then
+            for name in ${ELB_CLASSIC}; do
+              echo "Deleting ELB classic: ${name}"
+              aws elb delete-load-balancer --region "${AWS_REGION}" --load-balancer-name "${name}" || true
+            done
+          fi
+
+          sleep 30
+
+          ENIS=$(aws ec2 describe-network-interfaces \
+            --region "${AWS_REGION}" \
+            --filters Name=vpc-id,Values="${VPC_ID}" Name=status,Values=available \
+            --query 'NetworkInterfaces[?contains(Description, `ELB`)].NetworkInterfaceId' \
+            --output text || true)
+
+          if [ -n "${ENIS}" ]; then
+            for eni in ${ENIS}; do
+              echo "Deleting ENI: ${eni}"
+              aws ec2 delete-network-interface --region "${AWS_REGION}" --network-interface-id "${eni}" || true
+            done
+          fi
 
       - name: Terraform plan destroy
         run: |
