@@ -64,6 +64,9 @@ controller:
     fsGroup: 101
   containerSecurityContext:
     runAsUser: 101
+    runAsGroup: 101
+    allowPrivilegeEscalation: false
+    readOnlyRootFilesystem: false
   initContainers:
     - name: fix-nginx-agent-permissions
       image: busybox:1.36
