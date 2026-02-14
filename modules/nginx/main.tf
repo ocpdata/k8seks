@@ -70,7 +70,7 @@ controller:
       command:
         - sh
         - -c
-        - mkdir -p /etc/nginx/waf/bundles /etc/nginx/waf/nac-policies && chmod 644 /etc/nginx-agent/nginx-agent.conf
+        - mkdir -p /etc/nginx/waf/bundles /etc/nginx/waf/nac-policies
       volumeMounts:
         - name: app-protect-waf
           mountPath: /etc/nginx/waf
