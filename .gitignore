@@ -26,6 +26,9 @@ terraform.tfvars
 # Logs
 *.log
 
+# WAF bundles
+waf/cine/*.tgz
+
 # Crash dumps
 crash.log
 crash.*.log

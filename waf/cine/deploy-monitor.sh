@@ -3,9 +3,10 @@ set -euo pipefail
 
 NS_NGINX="nginx"
 NS_APP="cine"
-POLICY_JSON="$(dirname "$0")/policy-monitor.json"
-BUNDLE_TGZ="$(dirname "$0")/cine-monitor.tgz"
-MANIFEST="$(dirname "$0")/cine-waf-monitor.yaml"
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd -P)"
+POLICY_JSON="${SCRIPT_DIR}/policy-monitor.json"
+BUNDLE_TGZ="${SCRIPT_DIR}/cine-monitor.tgz"
+MANIFEST="${SCRIPT_DIR}/cine-waf-monitor.yaml"
 WAF_COMPILER_IMAGE="private-registry.nginx.com/nap/waf-compiler:5.11.0"
 
 if [[ ! -f "$POLICY_JSON" ]]; then
@@ -20,8 +21,7 @@ fi
 
 echo "[1/4] Compilando bundle WAF (transparent monitor)..."
 docker run --rm \
-  -v "$(pwd):$(pwd)" \
-  -v "$(dirname "$POLICY_JSON")":"$(dirname "$POLICY_JSON")" \
+  -v "${SCRIPT_DIR}:${SCRIPT_DIR}" \
   "$WAF_COMPILER_IMAGE" \
   -p "$POLICY_JSON" \
   -o "$BUNDLE_TGZ"
