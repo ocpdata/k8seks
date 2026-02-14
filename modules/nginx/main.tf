@@ -299,8 +299,8 @@ resource "helm_release" "nginx" {
   dynamic "set" {
     for_each = local.service_annotations
     content {
-      name  = "controller.service.annotations.${replace(each.key, ".", "\\.")}" 
-      value = each.value
+      name  = "controller.service.annotations.${replace(set.key, ".", "\\.")}" 
+      value = set.value
     }
   }
 
