@@ -1,3 +1,26 @@
+apiVersion: appprotect.f5.com/v1beta1
+kind: APPolicy
+metadata:
+  name: cine-monitor
+  namespace: cine
+spec:
+  policy:
+    name: cine-monitor
+    template:
+      name: POLICY_TEMPLATE_NGINX_BASE
+    enforcementMode: transparent
+---
+apiVersion: appprotect.f5.com/v1beta1
+kind: APLogConf
+metadata:
+  name: cine-monitor-log
+  namespace: cine
+spec:
+  content:
+    format: default
+  filter:
+    request_type: all
+---
 apiVersion: k8s.nginx.org/v1
 kind: Policy
 metadata:
@@ -6,7 +29,11 @@ metadata:
 spec:
   waf:
     enable: true
-    apBundle: "cine-monitor.tgz"
+    apPolicy: "cine-monitor"
+    securityLog:
+      enable: true
+      apLogConf: "cine-monitor-log"
+      logDest: "stderr"
 ---
 apiVersion: k8s.nginx.org/v1
 kind: VirtualServer

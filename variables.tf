@@ -128,6 +128,12 @@ variable "enable_nginx_one_agent" {
   default     = true
 }
 
+variable "embed_nginx_agent_config" {
+  description = "Embed NGINX Agent config in the controller image."
+  type        = bool
+  default     = true
+}
+
 variable "enable_nginx_waf" {
   description = "Enable F5 WAF for NGINX (App Protect v5)."
   type        = bool
@@ -144,6 +150,18 @@ variable "nginx_waf_image_repository" {
   description = "NGINX Plus Ingress Controller image repository when WAF is enabled."
   type        = string
   default     = "private-registry.nginx.com/nginx-ic-nap-v5/nginx-plus-ingress"
+}
+
+variable "enable_nginx_nlb" {
+  description = "Enable NLB for the NGINX Ingress Controller service."
+  type        = bool
+  default     = false
+}
+
+variable "enable_nginx_proxy_protocol" {
+  description = "Enable PROXY protocol settings for NGINX Ingress Controller."
+  type        = bool
+  default     = false
 }
 
 # ============================================================================

@@ -55,6 +55,11 @@ extensions:
 config_dirs: "/etc/nginx:/usr/local/etc/nginx:/usr/share/nginx/modules:/etc/nms:/etc/app_protect"
 YAML
   )
+
+  service_annotations = var.enable_nlb ? {
+    "service.beta.kubernetes.io/aws-load-balancer-type"           = "nlb"
+    "service.beta.kubernetes.io/aws-load-balancer-proxy-protocol" = "*"
+  } : {}
 }
 
 terraform {
@@ -145,7 +150,7 @@ resource "kubernetes_secret" "nginx_agent" {
 }
 
 resource "kubernetes_config_map" "nginx_agent_waf_config" {
-  count = var.enabled && var.enable_waf && var.data_plane_key != "" ? 1 : 0
+  count = var.enabled && var.enable_waf && var.data_plane_key != "" && !var.embed_nginx_agent_config ? 1 : 0
 
   metadata {
     name      = "nginx-agent-waf-config"
@@ -274,7 +279,7 @@ resource "helm_release" "nginx" {
   }
 
   dynamic "set" {
-    for_each = var.data_plane_key != "" && var.enable_waf ? [1] : []
+    for_each = var.data_plane_key != "" && var.enable_waf && !var.embed_nginx_agent_config ? [1] : []
     content {
       name  = "nginxAgent.customConfigMap"
       value = "nginx-agent-waf-config"
@@ -289,6 +294,38 @@ resource "helm_release" "nginx" {
   set {
     name  = "controller.service.type"
     value = "LoadBalancer"
+  }
+
+  dynamic "set" {
+    for_each = local.service_annotations
+    content {
+      name  = "controller.service.annotations.${replace(each.key, ".", "\\.")}" 
+      value = each.value
+    }
+  }
+
+  dynamic "set" {
+    for_each = var.enable_proxy_protocol ? [1] : []
+    content {
+      name  = "controller.config.proxy-protocol"
+      value = "true"
+    }
+  }
+
+  dynamic "set" {
+    for_each = var.enable_proxy_protocol ? [1] : []
+    content {
+      name  = "controller.config.real-ip-header"
+      value = "proxy_protocol"
+    }
+  }
+
+  dynamic "set" {
+    for_each = var.enable_proxy_protocol ? [1] : []
+    content {
+      name  = "controller.config.set-real-ip-from"
+      value = "0.0.0.0/0"
+    }
   }
 
   values = compact([var.helm_values, local.nginx_agent_values])

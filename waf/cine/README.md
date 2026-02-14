@@ -4,15 +4,13 @@ Este flujo habilita una policy WAF para `cine` en modo **solo monitoreo**.
 
 ## Archivos
 
-- `policy-monitor.json`: policy base con `enforcementMode: transparent`
-- `cine-waf-monitor.yaml`: recursos `Policy` + `VirtualServer`
-- `deploy-monitor.sh`: compila bundle, aplica manifests y copia bundle a pods NIC
+- `policy-monitor.json`: policy base con `enforcementMode: transparent` (referencia)
+- `cine-waf-monitor.yaml`: recursos `APPolicy`, `APLogConf`, `Policy` + `VirtualServer`
+- `deploy-monitor.sh`: aplica manifests
 
 ## Prerrequisitos
 
 - WAF ya habilitado en NGINX Ingress Controller (`controller.appprotect.enable=true`, `controller.appprotect.v5=true`)
-- Docker instalado localmente
-- Acceso al registro `private-registry.nginx.com`
 - `kubectl` configurado al cluster
 
 ## Ejecutar
@@ -21,7 +19,6 @@ Desde la raíz del repo:
 
 ```bash
 chmod +x waf/cine/deploy-monitor.sh
-export LICENSE_JWT='<tu_jwt>'
 ./waf/cine/deploy-monitor.sh
 ```
 
