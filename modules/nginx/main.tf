@@ -8,12 +8,14 @@ controller:
       emptyDir: {}
     - name: nginx-agent-log
       emptyDir: {}
+${var.enable_waf ? "    - name: app-protect-waf\n      emptyDir: {}" : ""}
 ${var.enable_waf ? "    - name: nap-compiler-state\n      emptyDir: {}" : ""}
   volumeMounts:
     - name: nginx-agent-state
       mountPath: /var/lib/nginx-agent
     - name: nginx-agent-log
       mountPath: /var/log/nginx-agent
+${var.enable_waf ? "    - name: app-protect-waf\n      mountPath: /etc/nginx/waf" : ""}
 ${var.enable_waf ? "    - name: nap-compiler-state\n      mountPath: /opt/nms-nap-compiler" : ""}
 YAML
   ) : ""
@@ -72,12 +74,6 @@ controller:
       volumeMounts:
         - name: app-protect-waf
           mountPath: /etc/nginx/waf
-  extraVolumes:
-    - name: app-protect-waf
-      emptyDir: {}
-  extraVolumeMounts:
-    - name: app-protect-waf
-      mountPath: /etc/nginx/waf
 YAML
   ) : ""
 
