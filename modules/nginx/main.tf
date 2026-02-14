@@ -64,8 +64,8 @@ controller:
     fsGroup: 0
     fsGroupChangePolicy: Always
   containerSecurityContext:
-    runAsUser: 101
-    runAsGroup: 101
+    runAsUser: 0
+    runAsGroup: 0
     allowPrivilegeEscalation: false
     readOnlyRootFilesystem: false
   initContainers:
