@@ -61,7 +61,8 @@ YAML
   waf_controller_values = var.enable_waf ? trimspace(<<-YAML
 controller:
   podSecurityContext:
-    fsGroup: 101
+    fsGroup: 0
+    fsGroupChangePolicy: Always
   containerSecurityContext:
     runAsUser: 101
     runAsGroup: 101
