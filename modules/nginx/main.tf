@@ -56,6 +56,31 @@ config_dirs: "/etc/nginx:/usr/local/etc/nginx:/usr/share/nginx/modules:/etc/nms:
 YAML
   )
 
+  waf_controller_values = var.enable_waf ? trimspace(<<-YAML
+controller:
+  podSecurityContext:
+    fsGroup: 101
+  containerSecurityContext:
+    runAsUser: 101
+  initContainers:
+    - name: fix-nginx-agent-permissions
+      image: busybox:1.36
+      command:
+        - sh
+        - -c
+        - mkdir -p /etc/nginx/waf/bundles /etc/nginx/waf/nac-policies && chmod 644 /etc/nginx-agent/nginx-agent.conf
+      volumeMounts:
+        - name: app-protect-waf
+          mountPath: /etc/nginx/waf
+  extraVolumes:
+    - name: app-protect-waf
+      emptyDir: {}
+  extraVolumeMounts:
+    - name: app-protect-waf
+      mountPath: /etc/nginx/waf
+YAML
+  ) : ""
+
   service_annotations = var.enable_nlb ? {
     "service.beta.kubernetes.io/aws-load-balancer-type"           = "nlb"
     "service.beta.kubernetes.io/aws-load-balancer-proxy-protocol" = "*"
@@ -328,7 +353,7 @@ resource "helm_release" "nginx" {
     }
   }
 
-  values = compact([var.helm_values, local.nginx_agent_values])
+  values = compact([var.helm_values, local.nginx_agent_values, local.waf_controller_values])
 
   depends_on = [
     kubernetes_namespace.nginx,
